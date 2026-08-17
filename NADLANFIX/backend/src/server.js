@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../../webapp')));
+app.use(express.static(path.join(__dirname, '../../public-site')));
 
 const PYTHON_API_BASE = process.env.PYTHON_API_BASE || 'http://127.0.0.1:8000';
 

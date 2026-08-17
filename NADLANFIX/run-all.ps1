@@ -4,8 +4,8 @@
 # Node is only needed for a fresh harvest of the real Yad2 feed (private
 # listings) via backend/src/scraper.js's persistent browser profile -
 # dashboard.html talks to Python alone. Start Python by itself for everything
-# else. The React frontend (frontend/) was retired to archive/frontend/ once
-# dashboard.html covered everything it did and more - see DEPLOY.md.
+# else. The production frontend is public-site/ (served by Netlify or locally
+# via the Node backend). See DEPLOYMENT_ARCHITECTURE.md for the full topology.
 
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Path
 $backendPath = Join-Path $repo 'backend'

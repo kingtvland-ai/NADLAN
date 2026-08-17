@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "login": "node src/login.js"
+    "login": "node src/login.js",
+    "facebook-login": "node src/facebook-login.js"
   },
   "dependencies": {
     "express": "^4.19.2",

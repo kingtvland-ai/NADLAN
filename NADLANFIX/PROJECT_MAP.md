@@ -1,7 +1,7 @@
 # מפת הפרויקט - NADLANFIX
 
 **עדכון אחרון:** 2026-08-17  
-**סטטוס:** 🟢 פעיל בייצור (Render)
+**סטטוס:** 🟢 פעיל (Local-first + Firestore + Netlify)
 
 ---
 
@@ -12,30 +12,14 @@
 | קובץ | תיאור | סטטוס |
 |------|--------|--------|
 | `dashboard.py` | ה-API הראשי של כל המערכת (Port 8000) | ✅ פעיל |
-| `db.py` | Schema של בסיס הנתונים SQLite | ✅ פעיל |
-| `requirements.txt` | תלויות Python | ✅ עדכני |
+| `db.py` | Schema של בסיס הנתונים SQLite + normalized_listings | ✅ פעיל |
+| `requirements.txt` | תלויות Python (כולל google-cloud-firestore) | ✅ עדכני |
 | `run-all.ps1` | Script להרצת כל השירותים (Windows) | ✅ פעיל |
 
 ### 📂 מבנה הספריות
 
 ```
 NADLANFIX/
-│
-├── 🔐 AUTH & RBAC
-│   └── app/auth/
-│       ├── __init__.py
-│       └── rbac.py              # Role-Based Access Control
-│
-├── 💼 CRM MODULE
-│   └── app/crm/
-│       ├── __init__.py
-│       ├── leads.py             # Lead management
-│       ├── tasks.py             # Task management
-│       ├── owners.py            # Property owner management
-│       ├── pipeline.py          # Sales pipeline stages
-│       ├── notes.py             # Notes & comments
-│       └── api/
-│           └── routes.py        # CRM API endpoints
 │
 ├── 🌐 DATA SOURCES
 │   └── sources/
@@ -44,17 +28,17 @@ NADLANFIX/
 │       │   ├── models.py        # Canonical listing models
 │       │   └── exceptions.py    # Source exceptions
 │       ├── yad2/
-│       │   └── adapter.py       # Yad2 implementation
+│       │   └── adapter.py       # Yad2 implementation → normalized_listings
 │       ├── facebook/
-│       │   └── adapter.py       # Facebook Marketplace impl.
+│       │   └── adapter.py       # Facebook Marketplace impl. → normalized_listings
 │       ├── onmap/
-│       │   └── adapter.py       # ONMAP implementation
+│       │   └── adapter.py       # ONMAP implementation → normalized_listings
 │       └── shared/
 │           └── utils.py         # Shared utilities
 │
 ├── ⚙️ SCHEDULED JOBS
 │   └── jobs/
-│       ├── scheduler.py         # Unified scheduler (retry, health)
+│       ├── scheduler.py         # Unified scheduler (retry, health) + Firestore sync
 │       ├── daily_ingest.py      # Daily ingestion orchestrator
 │       ├── health.py            # Health monitoring
 │       ├── validation.py        # Data validation
@@ -62,24 +46,20 @@ NADLANFIX/
 │
 ├── 💾 STORAGE LAYER
 │   └── storage/
-│       ├── sqlite_local.py      # Local SQLite normalized store
-│       ├── firestore_sync.py    # Firestore sync (optional)
-│       ├── snapshots.py         # Data snapshots/backups
-│       └── queries/             # Prepared SQL queries
+│       ├── firestore_sync.py    # Firestore batch sync (active)
+│       ├── active_db.py         # Firestore-first DB abstraction
+│       └── schema_versioning.py # Schema versioning
 │
-├── 🔄 DATA PIPELINE
-│   └── pipeline/
-│       ├── dedupe.py            # Deduplication
-│       ├── __init__.py
-│       └── [future components]
+├── 🗄️ DATABASE
+│   └── db.py                    # Single source of truth for all tables
+│       ├── plans, plan_status_log, subscriptions, notifications
+│       ├── yad2_listings, facebook_listings, onmap_listings
+│       ├── normalized_listings  # Unified listings table
+│       ├── listing_history, price_history
+│       ├── source_health, sync_queue, sync_history
+│       └── schema_versions, app_metadata, snapshots, backup_history
 │
-├── 🛠️ SERVICES
-│   └── services/
-│       ├── analytics/           # Lead analytics
-│       ├── enrichers/           # Data enrichers
-│       └── external/            # External API clients
-│
-├── 🌍 PUBLIC WEBSITE
+├── 🌍 PUBLIC WEBSITE (Production)
 │   └── public-site/
 │       ├── index.html           # Homepage / Login
 │       ├── search.html          # Property search
@@ -90,14 +70,42 @@ NADLANFIX/
 │       ├── categories.html      # Category select
 │       ├── css/style.css
 │       ├── js/
-│       │   └── api.js           # Frontend API client
-│       └── assets/
+│       │   ├── api.js           # Frontend API client
+│       │   └── app.js           # Frontend logic
+│       └── netlify.toml         # Netlify deployment config
 │
 ├── 📊 ADMIN DASHBOARD
-│   └── webapp/
-│       ├── dashboard_v2.html    # Admin dashboard UI
-│       ├── app.js               # Dashboard logic
-│       └── css/
+│   └── dashboard.py             # Single-file admin dashboard + API
+│
+├── 🛠️ BACKEND (Node.js)
+│   └── backend/
+│       ├── src/
+│       │   ├── server.js        # Express API (Yad2 feed proxy)
+│       │   ├── scraper.js       # Playwright browser management
+│       │   ├── feed.js          # Yad2 feed fetcher
+│       │   ├── login.js         # Yad2 Radware login helper
+│       │   └── facebook-login.js # Facebook session helper
+│       └── package.json
+│
+├── 🤖 BOTS
+│   └── bots/
+│       ├── telegram/            # Telegram bot
+│       └── whatsapp/            # WhatsApp bot
+│
+├── 🧪 TESTS
+│   └── tests/
+│       └── smoke_tests.py
+│
+├── 📁 DATA
+│   └── data/
+│       ├── planwatch.sqlite3    # Main database
+│       └── facebook_storage_state.json  # Facebook session
+│
+└── 📦 ARCHIVE
+    ├── frontend-webapp/         # Old webapp (replaced by public-site)
+    ├── deploy-render/           # Old Render/Docker deployment
+    └── storage-sqlite-local/    # Old NormalizedStore (merged into db.py)
+```
 │
 ├── 🖥️ NODE.JS BACKEND
 │   └── backend/
@@ -289,23 +297,23 @@ NADLANFIX/
      └──────────┬───────────────────┘
                 ↓
      ┌──────────────────────────────┐
-     │   Dashboard API              │
-     │   (dashboard.py:8000)        │
-     │                              │
-     │ ├── /api/local-listings      │
-     │ ├── /api/crm/leads           │
-     │ └── /api/deals               │
-     └──────────┬───────────────────┘
-                ↓
-     ┌──────────────────────────────┐
-     │   Client Applications        │
-     │                              │
-     │ ├── Public Website           │
-     │ │   (public-site/)           │
-     │ │                            │
-     │ └── Admin Dashboard          │
-     │     (webapp/dashboard_v2)    │
-     └──────────────────────────────┘
+      │   Dashboard API              │
+      │   (dashboard.py:8000)        │
+      │                              │
+      │ ├── /api/local-listings      │
+      │ ├── /api/crm/leads           │
+      │ └── /api/deals               │
+      └──────────┬───────────────────┘
+                 ↓
+      ┌──────────────────────────────┐
+      │   Client Applications        │
+      │                              │
+      │ ├── Public Website           │
+      │ │   (public-site/ → Netlify) │
+      │ │                            │
+      │ └── Admin Dashboard          │
+      │     (dashboard.py)           │
+      └──────────────────────────────┘
 ```
 
 ---
@@ -408,10 +416,9 @@ stale_threshold_hours = 24         # Consider data stale
 
 ### Deployment Platforms
 
-- **Render** - Cloud hosting (primary)
-- **Docker** - Containerization
-- **Netlify** - Static site hosting (optional)
-- **Firebase** - Database backup storage
+- **Local** - Primary development and production environment
+- **Netlify** - Static site hosting for public-site frontend
+- **Firebase** - Firestore for operational data sync
 
 ---
 
@@ -472,14 +479,14 @@ python -m pytest --cov=app --cov=sources tests/
 ## 🔐 Security Checklist
 
 - [x] RBAC implemented
-- [x] HTTPS ready (Render handles certificates)
+- [x] HTTPS ready (Netlify handles certificates)
 - [x] Password hashing (scrypt)
 - [x] Session token rotation
 - [x] Basic auth for admin endpoints
 - [x] CORS configured
 - [x] SQL injection protection (parameterized queries)
 - [ ] Rate limiting (TODO)
-- [ ] DDoS protection (Render handles)
+- [ ] DDoS protection (Netlify handles)
 
 ---
 
@@ -488,4 +495,4 @@ python -m pytest --cov=app --cov=sources tests/
 - **Server won't start**: Check `PLANWATCH_DB` path and port availability
 - **No listings showing**: Run `python -m jobs.daily_ingest run --all`
 - **Authentication issues**: Check `PLANWATCH_BASIC_AUTH` environment variable
-- **Database corruption**: Restore from Litestream backup
+- **Database corruption**: Restore from local backup

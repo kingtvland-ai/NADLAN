@@ -1,0 +1,11 @@
+[build]
+  publish = "public-site"
+  command = ""
+
+[build.environment]
+  API_BASE = "https://your-api-domain.com"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

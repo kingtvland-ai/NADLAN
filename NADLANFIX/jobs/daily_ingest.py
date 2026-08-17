@@ -30,9 +30,9 @@ from sources.onmap.adapter import OnmapSourceAdapter
 # Default configuration
 DEFAULT_DB_PATH = Path(__file__).parent.parent / "data" / "planwatch.sqlite3"
 DEFAULT_SOURCES = {
-    "yad2": {"target": 18000, "enabled": True},
-    "facebook": {"target": 500, "enabled": True},
-    "onmap": {"target": 5000, "enabled": True},
+    "yad2": {"target": 100000, "enabled": True},
+    "facebook": {"target": 5000, "enabled": True},
+    "onmap": {"target": 10000, "enabled": True},
 }
 
 

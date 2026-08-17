@@ -148,7 +148,7 @@ def test_dedupe_layer():
 
 def test_normalized_store():
     """Test that the normalized store works."""
-    from storage.sqlite_local import NormalizedStore
+    from db import NormalizedStore
 
     with tempfile.NamedTemporaryFile(suffix=".sqlite3", delete=False) as f:
         db_path = f.name

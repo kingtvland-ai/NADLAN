@@ -24,6 +24,12 @@ from typing import Any, Callable, Optional
 
 from sources.base.adapter import BaseSourceAdapter, SourceRunState, SourceHealthInfo, SourceStatus
 
+try:
+    from storage.firestore_sync import FirestoreSync
+    HAS_FIRESTORE = True
+except ImportError:
+    HAS_FIRESTORE = False
+
 
 class JobStatus(Enum):
     """Status of a scheduled job."""
@@ -257,10 +263,17 @@ class UnifiedScheduler:
                         break
                     finally:
                         conn.close()
-
                 except Exception as exc:
                     last_error = str(exc)
                     attempt += 1
+
+            if result.status == JobStatus.SUCCESS and HAS_FIRESTORE:
+                try:
+                    sync = FirestoreSync(self.db_path)
+                    sync_result = sync.sync_listings()
+                    result.metadata["firestore_sync"] = sync_result
+                except Exception as exc:
+                    result.metadata["firestore_sync_error"] = str(exc)
 
             result.finished_at = self._now()
             result.duration_seconds = (

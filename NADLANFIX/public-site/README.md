@@ -54,11 +54,18 @@ public-site/
 
 ## הפעלה
 
-```bash
-# העתק את התיקייה ל-webapp/
-cp -r public-site/* webapp/
+### מקומי
 
-# או הגש ישירות מ-NADLANFIX/
+```bash
 cd NADLANFIX/public-site
 python -m http.server 8080
 ```
+
+### Netlify
+
+הפריסה ב-Netlify מתבצעת אוטומטית מהתיקייה `public-site/`. יש להגדיר ב-Netlify:
+1. Build command: (ריק - אתר סטטי)
+2. Publish directory: `public-site/`
+3. Environment variable: `API_BASE` → כתובת ה-API של הפרויקט
+
+ראה `netlify.toml` לקונפיגורציה מלאה.

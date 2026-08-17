@@ -5,6 +5,22 @@ let searchData = null;
 
 // Page Navigation
 function showPage(pageId) {
+  const pageMap = {
+    'index-page': 'index.html',
+    'search-page': 'search.html',
+    'categories-page': 'categories.html',
+    'transactions-page': 'transactions.html',
+    'opportunities-page': 'opportunities.html',
+    'map-page': 'map.html',
+    'planning-page': 'planning.html',
+  };
+
+  const targetFile = pageMap[pageId];
+  if (targetFile && !document.getElementById(pageId)) {
+    window.location.href = targetFile;
+    return;
+  }
+
   document.querySelectorAll('.page').forEach(page => {
     page.classList.remove('active');
   });
@@ -15,7 +31,6 @@ function showPage(pageId) {
     currentPage = pageId;
     window.scrollTo(0, 0);
 
-    // Trigger page-specific initialization
     if (pageId === 'map-page') {
       initMap();
     }

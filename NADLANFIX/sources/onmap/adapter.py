@@ -100,12 +100,13 @@ class OnmapSourceAdapter(BaseSourceAdapter):
     def fetch(self, conn: sqlite3.Connection, target: int, **kwargs) -> list[dict]:
         """Fetch listings from ONMAP."""
         from ingestion.feeds import onmap_feed
-        return onmap_feed.harvest(target=target, **kwargs)
+        onmap_feed.harvest(target=target, **kwargs)
+        return onmap_feed.rows(limit=target)
 
     def normalize(self, raw: dict) -> dict:
         """Normalize ONMAP listing to canonical format."""
         return {
-            "listing_id": raw.get("id", ""),
+            "canonical_id": f"onmap:{raw.get('id', '')}",
             "source": "onmap",
             "external_id": raw.get("id", ""),
             "title": raw.get("title", ""),
@@ -120,17 +121,17 @@ class OnmapSourceAdapter(BaseSourceAdapter):
             "rooms": raw.get("rooms"),
             "area_sqm": raw.get("area_sqm"),
             "floor": raw.get("floor"),
-            "bathrooms": None,
-            "parking": None,
+            "bathrooms": raw.get("bathrooms"),
+            "parking": raw.get("parking"),
             "city": raw.get("city", ""),
             "neighborhood": raw.get("neighborhood", ""),
-            "street": raw.get("address", ""),
+            "street": raw.get("street", ""),
             "address_text": raw.get("address_text", ""),
-            "lat": None,
-            "lon": None,
+            "lat": raw.get("lat"),
+            "lon": raw.get("lon"),
             "gush": None,
             "helka": None,
-            "image_url": raw.get("image_url"),
+            "image_url": raw.get("image"),
             "images": raw.get("images", []),
             "url": raw.get("url"),
             "source_query": "",
@@ -151,6 +152,9 @@ class OnmapSourceAdapter(BaseSourceAdapter):
             "is_active": True,
             "delisted_at": raw.get("delisted_at"),
             "seen_count": raw.get("seen_count", 1),
+            "raw_json": json.dumps(raw, ensure_ascii=False),
+            "schema_version": "1.0",
+            "app_version": None,
         }
 
     def count(self, conn: sqlite3.Connection) -> dict:
@@ -161,43 +165,59 @@ class OnmapSourceAdapter(BaseSourceAdapter):
     def _persist_listing(self, conn: sqlite3.Connection, listing: dict) -> bool:
         """Persist a normalized listing. Returns True if inserted."""
         existing = conn.execute(
-            "SELECT id FROM onmap_listings WHERE id = ?",
-            (listing["listing_id"],)
+            "SELECT canonical_id FROM normalized_listings WHERE canonical_id = ?",
+            (listing["canonical_id"],)
         ).fetchone()
 
         now = self._now()
 
         if existing is None:
             conn.execute(
-                """INSERT INTO onmap_listings
-                   (id, title, normalized_title, fingerprint, url, price, price_text,
-                    currency, city, neighborhood, address, address_text, rooms, area_sqm,
-                    floor, property_type, condition, image_url, images_json, agency,
-                    contact_name, phone, phone_source, phone_basis, description,
-                    listing_type, is_private, is_broker, brokerage, seller_listings,
-                    seller_portfolio_censored, seller_basis, first_seen_at, last_seen_at,
-                    created_at, seen_count, captured_at, is_active)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO normalized_listings
+                   (canonical_id, source, external_id, title, description,
+                    normalized_title, price, price_text, currency, previous_price,
+                    property_type, condition, rooms, area_sqm, floor, bathrooms,
+                    parking, city, neighborhood, street, address_text, lat, lon,
+                    gush, helka, image_url, images_json, url, source_query,
+                    category, classification_source, classification_confidence,
+                    restricted, deal_score, score_confidence, score_reasons_json,
+                    seller_name, agency, phone, phone_source, first_seen_at,
+                    last_seen_at, captured_at, is_active, delisted_at, seen_count,
+                    raw_json, schema_version, app_version, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    listing["listing_id"], listing["title"], listing["normalized_title"],
-                    "", listing["url"], listing["price"], listing["price_text"],
-                    listing["currency"], listing["city"], listing["neighborhood"],
-                    listing["street"], listing["address_text"], listing["rooms"],
-                    listing["area_sqm"], listing["floor"], listing["property_type"],
-                    listing["condition"], listing["image_url"],
-                    json.dumps(listing.get("images", [])), listing["agency"],
-                    listing["seller_name"], listing["phone"], listing["phone_source"],
-                    "", listing["description"], "", 0, 0, "", 0, 0, "",
-                    listing["first_seen_at"], now, now, 1, now, 1,
+                    listing["canonical_id"], listing["source"], listing["external_id"],
+                    listing["title"], listing.get("description"),
+                    listing.get("normalized_title", ""), listing.get("price"),
+                    listing.get("price_text"), listing.get("currency", "ILS"),
+                    listing.get("previous_price"), listing.get("property_type", "unknown"),
+                    listing.get("condition", "unknown"), listing.get("rooms"),
+                    listing.get("area_sqm"), listing.get("floor"), listing.get("bathrooms"),
+                    listing.get("parking"), listing["city"], listing.get("neighborhood"),
+                    listing.get("street", ""), listing.get("address_text", ""),
+                    listing.get("lat"), listing.get("lon"), listing.get("gush"),
+                    listing.get("helka"), listing.get("image_url"),
+                    json.dumps(listing.get("images", [])), listing.get("url"),
+                    listing.get("source_query", ""), listing.get("category", "other"),
+                    listing.get("classification_source", "heuristic"),
+                    listing.get("classification_confidence", 0.0),
+                    listing.get("restricted", False), listing.get("deal_score", 0.0),
+                    listing.get("score_confidence", 0.0),
+                    json.dumps(listing.get("score_reasons", [])),
+                    listing.get("seller_name"), listing.get("agency"),
+                    listing.get("phone"), listing.get("phone_source"),
+                    listing.get("first_seen_at", now), now, now, 1,
+                    listing.get("delisted_at"), 1,
+                    listing.get("raw_json"), "1.0", None, now, now,
                 )
             )
             return True
         else:
             conn.execute(
-                """UPDATE onmap_listings
+                """UPDATE normalized_listings
                    SET last_seen_at = ?, seen_count = seen_count + 1,
                        price = ?, price_text = ?, is_active = 1
-                   WHERE id = ?""",
-                (now, listing["price"], listing["price_text"], listing["listing_id"])
+                   WHERE canonical_id = ?""",
+                (now, listing.get("price"), listing.get("price_text"), listing["canonical_id"])
             )
             return False

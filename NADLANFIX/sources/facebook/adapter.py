@@ -95,12 +95,13 @@ class FacebookSourceAdapter(BaseSourceAdapter):
     def fetch(self, conn: sqlite3.Connection, target: int, **kwargs) -> list[dict]:
         """Fetch listings from Facebook Marketplace."""
         from ingestion.feeds import facebook_feed
-        return facebook_feed.harvest(target=target, **kwargs)
+        facebook_feed.harvest(target=target, **kwargs)
+        return facebook_feed.rows(limit=target)
 
     def normalize(self, raw: dict) -> dict:
         """Normalize Facebook listing to canonical format."""
         return {
-            "listing_id": raw.get("listing_id", ""),
+            "canonical_id": f"facebook:{raw.get('listing_id', '')}",
             "source": "facebook",
             "external_id": raw.get("listing_id", ""),
             "title": raw.get("title", ""),
@@ -146,6 +147,9 @@ class FacebookSourceAdapter(BaseSourceAdapter):
             "is_active": True,
             "delisted_at": raw.get("delisted_at"),
             "seen_count": raw.get("seen_count", 1),
+            "raw_json": json.dumps(raw, ensure_ascii=False),
+            "schema_version": "1.0",
+            "app_version": None,
         }
 
     def count(self, conn: sqlite3.Connection) -> dict:
@@ -156,40 +160,59 @@ class FacebookSourceAdapter(BaseSourceAdapter):
     def _persist_listing(self, conn: sqlite3.Connection, listing: dict) -> bool:
         """Persist a normalized listing. Returns True if inserted."""
         existing = conn.execute(
-            "SELECT listing_id FROM facebook_listings WHERE listing_id = ?",
-            (listing["listing_id"],)
+            "SELECT canonical_id FROM normalized_listings WHERE canonical_id = ?",
+            (listing["canonical_id"],)
         ).fetchone()
 
         now = self._now()
 
         if existing is None:
             conn.execute(
-                """INSERT INTO facebook_listings
-                   (listing_id, title, normalized_title, fingerprint, url, price_text,
-                    price_value, currency, location, image_url, seller_name, description,
-                    category, condition, classification_source, classification_confidence,
-                    restricted, city_id, city_name, source_query, first_seen_at,
-                    last_seen_at, seen_count, captured_at, is_active)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO normalized_listings
+                   (canonical_id, source, external_id, title, description,
+                    normalized_title, price, price_text, currency, previous_price,
+                    property_type, condition, rooms, area_sqm, floor, bathrooms,
+                    parking, city, neighborhood, street, address_text, lat, lon,
+                    gush, helka, image_url, images_json, url, source_query,
+                    category, classification_source, classification_confidence,
+                    restricted, deal_score, score_confidence, score_reasons_json,
+                    seller_name, agency, phone, phone_source, first_seen_at,
+                    last_seen_at, captured_at, is_active, delisted_at, seen_count,
+                    raw_json, schema_version, app_version, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    listing["listing_id"], listing["title"], listing["normalized_title"],
-                    "", listing["url"], listing["price_text"],
-                    listing["price"], listing["currency"], listing["neighborhood"],
-                    listing["image_url"], listing["seller_name"], listing["description"],
-                    listing["category"], listing["condition"],
-                    listing["classification_source"], listing["classification_confidence"],
-                    listing["restricted"], "", listing["city"],
-                    listing["source_query"], listing["first_seen_at"],
-                    now, 1, now, 1,
+                    listing["canonical_id"], listing["source"], listing["external_id"],
+                    listing["title"], listing.get("description"),
+                    listing.get("normalized_title", ""), listing.get("price"),
+                    listing.get("price_text"), listing.get("currency", "ILS"),
+                    listing.get("previous_price"), listing.get("property_type", "other"),
+                    listing.get("condition", "unknown"), listing.get("rooms"),
+                    listing.get("area_sqm"), listing.get("floor"), listing.get("bathrooms"),
+                    listing.get("parking"), listing["city"], listing.get("neighborhood"),
+                    listing.get("street", ""), listing.get("address_text", ""),
+                    listing.get("lat"), listing.get("lon"), listing.get("gush"),
+                    listing.get("helka"), listing.get("image_url"),
+                    json.dumps(listing.get("images", [])), listing.get("url"),
+                    listing.get("source_query", ""), listing.get("category", "other"),
+                    listing.get("classification_source", "heuristic"),
+                    listing.get("classification_confidence", 0.0),
+                    listing.get("restricted", False), listing.get("deal_score", 0.0),
+                    listing.get("score_confidence", 0.0),
+                    json.dumps(listing.get("score_reasons", [])),
+                    listing.get("seller_name"), listing.get("agency"),
+                    listing.get("phone"), listing.get("phone_source"),
+                    listing.get("first_seen_at", now), now, now, 1,
+                    listing.get("delisted_at"), 1,
+                    listing.get("raw_json"), "1.0", None, now, now,
                 )
             )
             return True
         else:
             conn.execute(
-                """UPDATE facebook_listings
+                """UPDATE normalized_listings
                    SET last_seen_at = ?, seen_count = seen_count + 1,
-                       price_value = ?, price_text = ?, is_active = 1
-                   WHERE listing_id = ?""",
-                (now, listing["price"], listing["price_text"], listing["listing_id"])
+                       price = ?, price_text = ?, is_active = 1
+                   WHERE canonical_id = ?""",
+                (now, listing.get("price"), listing.get("price_text"), listing["canonical_id"])
             )
             return False

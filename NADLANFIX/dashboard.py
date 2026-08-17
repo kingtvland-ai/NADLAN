@@ -2787,7 +2787,7 @@ class Handler(BaseHTTPRequestHandler):
             "marketSpread": None,
         }
         try:
-            from storage.sqlite_local import NormalizedStore
+            from db import NormalizedStore
             store = NormalizedStore(db.DB_PATH)
             counts = store.count()
             kpis["totalListings"] = counts.get("total", 0)
@@ -4298,7 +4298,7 @@ class Handler(BaseHTTPRequestHandler):
         offset = as_int(q.get("offset"), "offset", 0, low=0)
 
         try:
-            from storage.sqlite_local import NormalizedStore
+            from db import NormalizedStore
             store = NormalizedStore(db.DB_PATH)
             rows = store.get_active_filtered(
                 source=source,
@@ -4336,7 +4336,7 @@ class Handler(BaseHTTPRequestHandler):
         offset = as_int(q.get("offset"), "offset", 0, low=0)
 
         try:
-            from storage.sqlite_local import NormalizedStore
+            from db import NormalizedStore
             store = NormalizedStore(db.DB_PATH)
             rows = store.get_active_filtered(
                 source=source,
@@ -4400,7 +4400,7 @@ class Handler(BaseHTTPRequestHandler):
     def _api_listing_stats(self, conn) -> dict:
         """Stats about the normalized listings."""
         try:
-            from storage.sqlite_local import NormalizedStore
+            from db import NormalizedStore
             store = NormalizedStore(db.DB_PATH)
             return store.count()
         except Exception as exc:
