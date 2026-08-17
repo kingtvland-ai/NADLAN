@@ -1,0 +1,63 @@
+# PlanWatch — Render blueprint. See DEPLOY.md §5 for the full walkthrough.
+#
+# One web service, one disk, one image (Dockerfile) that runs both Python
+# and Node - see Dockerfile and docker-entrypoint.sh for why they share a
+# container instead of being two Render services. A second web service could
+# not mount the same disk Python needs for planwatch.sqlite3; Render disks
+# attach to exactly one service.
+#
+# The cron job is a SEPARATE, tiny image (Dockerfile.cron) that only curls
+# the web service's own POST /api/scheduler/run - it does not run
+# scheduler.py itself and does not touch the disk directly, for the same
+# single-disk reason. See Dockerfile.cron for the defect this replaced: an
+# earlier draft gave the cron job its own disk block with the same `name:`,
+# which does not share storage on Render - it silently creates a second,
+# empty volume.
+services:
+  - type: web
+    name: planwatch
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter                    # Free has no persistent disk - see DEPLOY.md §1.3/§8
+    healthCheckPath: /api/health     # answers without auth or a DB read - see dashboard.py
+    disk:
+      name: planwatch-data
+      mountPath: /data               # matches PLANWATCH_DB below
+      sizeGB: 5                      # 702 MB today; headroom for growth
+    envVars:
+      - key: PLANWATCH_DB
+        value: /data/planwatch.sqlite3
+      - key: PLANWATCH_DEPLOY
+        value: render                # also set in the Dockerfile; explicit here so
+                                     # this file stays the single source of truth
+      - key: PLANWATCH_BASIC_AUTH
+        sync: false                  # set by hand in the Render dashboard, never in the repo
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PLANWATCH_TELEGRAM_TOKEN
+        sync: false                  # from @BotFather - set by hand; bots/telegram/bot.js exits
+                                     # quietly (not a container failure) if this is unset
+      - key: WHATSAPP_AUTH_DIR
+        value: /data/whatsapp-auth   # same persistent disk as the DB, so a restart does not
+                                     # force bots/whatsapp/bot.js to be re-scanned
+      - key: WHATSAPP_QR_PATH
+        value: /data/whatsapp-auth/qr.png   # must agree with WHATSAPP_AUTH_DIR above - dashboard.py's
+                                            # own default lives next to the code, not the disk, so
+                                            # this has to be set explicitly or the two disagree
+
+  - type: cron
+    name: planwatch-scheduled-refresh
+    env: docker
+    dockerfilePath: ./Dockerfile.cron
+    # Matches AUTO_CYCLE_HOURS in dashboard.py, so the cloud cadence is the
+    # same one the in-process thread already runs locally - this job is not
+    # a new schedule, it is that same thread's replacement. Each of the 15
+    # jobs still only actually runs when its own interval in
+    # scheduler.INTERVAL_HOURS has elapsed; a ping that finds nothing due
+    # returns immediately.
+    schedule: "0 */12 * * *"
+    envVars:
+      - key: PLANWATCH_URL
+        value: https://planwatch.onrender.com   # replace with this service's real URL
+      - key: PLANWATCH_BASIC_AUTH
+        sync: false                              # must match the web service's value above

@@ -1,0 +1,12 @@
+# Litestream config - continuously replicates PLANWATCH_DB to Google Cloud
+# Storage (a Firebase Storage bucket is a GCS bucket) so the SQLite file
+# survives a container restart/redeploy on a plan with no persistent disk.
+# Entirely inert when LITESTREAM_GCS_BUCKET is unset - see docker-entrypoint.sh,
+# which only invokes litestream at all when that variable is set. Local dev
+# and any environment with a real mounted disk never touches this.
+dbs:
+  - path: ${PLANWATCH_DB}
+    replicas:
+      - type: gcs
+        bucket: ${LITESTREAM_GCS_BUCKET}
+        path: planwatch-sqlite

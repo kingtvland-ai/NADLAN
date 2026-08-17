@@ -1,0 +1,6 @@
+[build]
+  publish = "."
+
+# Pure static site - no build step, no functions. The API stays on Render
+# (see config.js) and already serves permissive CORS, so nothing here needs
+# a redirect/proxy.

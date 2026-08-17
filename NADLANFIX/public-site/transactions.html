@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NADLANFIX - כל העסקאות</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page active" id="transactions-page">
+    <nav class="navbar">
+      <div class="navbar-content">
+        <a href="#" class="navbar-brand" onclick="goBack(); return false;">
+          <div class="navbar-brand-icon">N</div>
+          <span>NADLANFIX</span>
+        </a>
+        <div class="navbar-user">
+          <span class="navbar-user-name" id="page-title">כל העסקאות</span>
+        </div>
+      </div>
+    </nav>
+
+    <section class="section">
+      <div class="container">
+        <button class="back-btn" onclick="goBack()">
+          ← חזרה לקטגוריות
+        </button>
+
+        <div class="filters-bar">
+          <div class="filter-group">
+            <label class="filter-label">מחיר מינימום</label>
+            <input type="number" id="filter-min-price" class="filter-input" placeholder="₪">
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">מחיר מקסימום</label>
+            <input type="number" id="filter-max-price" class="filter-input" placeholder="₪">
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">חדרים מינימום</label>
+            <input type="number" id="filter-min-rooms" class="filter-input" placeholder="חדרים">
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">מ״ר מינימום</label>
+            <input type="number" id="filter-min-sqm" class="filter-input" placeholder="מ״ר">
+          </div>
+          <button class="btn btn-primary" onclick="applyFilters()" style="padding: 10px 24px;">
+            סנן
+          </button>
+        </div>
+
+        <div id="transactions-results">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    function applyFilters() {
+      const params = {
+        city: searchData?.city || '',
+        min_price: document.getElementById('filter-min-price').value || '',
+        max_price: document.getElementById('filter-max-price').value || '',
+        min_rooms: document.getElementById('filter-min-rooms').value || '',
+        min_sqm: document.getElementById('filter-min-sqm').value || '',
+        limit: 50,
+      };
+
+      api.getCombinedListings(params)
+        .then(data => renderTransactions(data))
+        .catch(error => {
+          document.getElementById('transactions-results').innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">⚠️</div>
+              <div class="empty-state-title">שגיאה בטעינת הנתונים</div>
+              <div>${error.message}</div>
+            </div>
+          `;
+        });
+    }
+  </script>
+</body>
+</html>

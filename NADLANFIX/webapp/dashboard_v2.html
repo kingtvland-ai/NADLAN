@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NADLANFIX — לוח בקרה חדש</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <style>
+        /* ============ Design Tokens ============ */
+        :root {
+            --primary: #2a78d6;
+            --primary-light: #e8f0ff;
+            --success: #0ca30c;
+            --warning: #fab219;
+            --critical: #d03b3b;
+            
+            --surface-1: #fcfcfb;
+            --surface-2: #f5f5f3;
+            --page: #f9f9f7;
+            
+            --text-primary: #0b0b0b;
+            --text-secondary: #52514e;
+            --text-muted: #898781;
+            
+            --border: rgba(11, 11, 11, 0.10);
+            --grid: #e1e0d9;
+            
+            --radius: 10px;
+            --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            --transition: all 0.2s ease;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:where(:not([data-theme="light"])) {
+                --surface-1: #1a1a19;
+                --surface-2: #252523;
+                --page: #0d0d0d;
+                --text-primary: #fff;
+                --text-secondary: #c3c2b7;
+                --text-muted: #898781;
+                --border: rgba(255, 255, 255, 0.10);
+            }
+        }
+
+        /* ============ Base ============ */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--page);
+            color: var(--text-primary);
+            font-family: var(--sans);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* ============ Typography ============ */
+        h1, h2, h3 { 
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        /* ============ Header ============ */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--surface-1);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .brand {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Hamburger Menu */
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .hamburger {
+                display: block;
+            }
+        }
+
+        /* Search Bar */
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+            background: var(--page);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 8px 16px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+        .search-box::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-box:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: -1px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: var(--transition);
+        }
+
+        .icon-btn:hover {
+            background: var(--page);
+            color: var(--primary);
+        }
+
+        /* ============ Sidebar Navigation ============ */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 240px;
+            height: 100vh;
+            background: var(--surface-1);
+            border-right: 1px solid var(--border);
+            padding-top: 60px;
+            padding-bottom: 20px;
+            overflow-y: auto;
+            z-index: 90;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        @media (min-width: 769px) {
+            .sidebar {
+                transform: translateX(0);
+                position: sticky;
+                top: 0;
+                height: calc(100vh - 53px);
+            }
+        }
+
+        .nav-group {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-group:last-child {
+            border-bottom: none;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition);
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: right;
+            font-size: 14px;
+        }
+
+        .nav-item:hover {
+            background: var(--surface-2);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* ============ Main Layout ============ */
+        .container {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        main {
+            padding: 24px;
+            background: var(--page);
+            overflow-y: auto;
+        }
+
+        /* ============ Content Area ============ */
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        /* ============ Quick Filter Bar ============ */
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            background: var(--page);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .filter-bar select:focus,
+        .filter-bar input:focus {
+            outline: 2px solid var(--primary);
+            outline-offset: -1px;
+        }
+
+        .filter-bar button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .filter-bar button:hover {
+            filter: brightness(1.08);
+        }
+
+        .filter-bar .icon-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 6px;
+            transition: var(--transition);
+        }
+
+        .filter-bar .icon-btn:hover {
+            background: var(--surface-2);
+            color: var(--primary);
+        }
+
+        .spacer {
+            flex: 1;
+        }
+
+        /* ============ KPI Tiles ============ */
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .kpi {
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+
+        .kpi-label {
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .kpi-value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 8px 0;
+        }
+
+        .kpi-trend {
+            font-size: 12px;
+            color: var(--success);
+        }
+
+        /* ============ Collapsible Drawer ============ */
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px;
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 16px;
+        }
+
+        .drawer-header:hover {
+            background: var(--surface-2);
+        }
+
+        .drawer-icon {
+            font-size: 14px;
+            transition: transform 0.3s ease;
+        }
+
+        .drawer-header.open .drawer-icon {
+            transform: rotate(180deg);
+        }
+
+        .drawer-content {
+            display: none;
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .drawer-content.open {
+            display: block;
+        }
+
+        .filter-section {
+            margin-bottom: 16px;
+        }
+
+        .filter-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        /* ============ Table ============ */
+        .tablewrap {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface-1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background: var(--surface-2);
+            padding: 12px;
+            text-align: right;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--grid);
+            text-align: right;
+        }
+
+        tr:hover {
+            background: var(--surface-2);
+        }
+
+        /* ============ Tabs ============ */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* ============ Overlay (for sidebar on mobile) ============ */
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 80;
+        }
+
+        .overlay.open {
+            display: block;
+        }
+
+        /* ============ Responsive ============ */
+        @media (max-width: 768px) {
+            main {
+                padding: 16px;
+            }
+
+            .kpis {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 12px;
+            }
+
+            .kpi-value {
+                font-size: 24px;
+            }
+
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-bar select,
+            .filter-bar input,
+            .filter-bar button {
+                width: 100%;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-left">
+            <button class="hamburger" id="hamburger">☰</button>
+            <div class="brand">NADLANFIX</div>
+        </div>
+        <input type="text" class="search-box" placeholder="חיפוש..." />
+        <div class="header-right">
+            <button class="icon-btn">⚙️</button>
+            <button class="icon-btn">👤</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="nav-group">
+                <button class="nav-item active" data-tab="dashboard">
+                    <span>📊</span>
+                    <span>בית</span>
+                </button>
+                <button class="nav-item" data-tab="opportunities">
+                    <span>🎯</span>
+                    <span>הזדמנויות</span>
+                </button>
+                <button class="nav-item" data-tab="analytics">
+                    <span>📈</span>
+                    <span>ניתוח</span>
+                </button>
+            </div>
+
+            <div class="nav-group">
+                <button class="nav-item">
+                    <span>🌍</span>
+                    <span>מקורות</span>
+                </button>
+                <button class="nav-item">
+                    <span>🗂️</span>
+                    <span>אחסון</span>
+                </button>
+                <button class="nav-item">
+                    <span>🔧</span>
+                    <span>הגדרות</span>
+                </button>
+            </div>
+
+            <div class="nav-group">
+                <button class="nav-item">
+                    <span>🌙</span>
+                    <span>מצב חשוך</span>
+                </button>
+                <button class="nav-item">
+                    <span>❌</span>
+                    <span>יציאה</span>
+                </button>
+            </div>
+        </nav>
+
+        <div class="overlay" id="overlay"></div>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Dashboard Tab -->
+            <div class="content active" id="dashboard">
+                <h2 style="margin-bottom: 24px;">🏠 לוח בקרה</h2>
+
+                <!-- KPIs -->
+                <div class="kpis" id="kpi-container">
+                    <!-- KPIs rendered dynamically by renderKpis() -->
+                </div>
+
+                <!-- Loading / Empty / Error states -->
+                <div class="kpi" id="kpi-loading" style="display:none;">
+                    <div class="kpi-label">טוען נתונים…</div>
+                    <div class="kpi-value">⏳</div>
+                </div>
+                <div class="kpi" id="kpi-error" style="display:none;">
+                    <div class="kpi-label">שגיאה</div>
+                    <div class="kpi-value">⚠️</div>
+                    <div class="kpi-trend" id="kpi-error-msg"></div>
+                </div>
+
+                <!-- Quick Filter Bar -->
+                <div class="filter-bar">
+                    <select id="filter-city">
+                        <option value="">🏙 כל הערים</option>
+                    </select>
+                    <select id="filter-property-type">
+                        <option value="">🏠 כל סוגי הנכסים</option>
+                    </select>
+                    <select id="filter-price">
+                        <option value="">💰 כל טווחי המחיר</option>
+                    </select>
+                    <div class="spacer"></div>
+                    <button id="filter-apply">סנן</button>
+                    <button id="filter-reset" style="display:none;">איפוס</button>
+                    <button id="filter-refresh" title="רענן">🔄</button>
+                </div>
+
+                <!-- Collapsible Advanced Filters -->
+                <div class="drawer-header" id="drawer-toggle">
+                    <span class="drawer-icon">▼</span>
+                    <span>סינון מורחב</span>
+                </div>
+                <div class="drawer-content" id="drawer-content">
+                    <div class="filter-section">
+                        <label class="filter-label">שטח (מ"ר)</label>
+                        <input type="range" min="0" max="500" style="width: 100%" />
+                    </div>
+                    <div class="filter-section">
+                        <label class="filter-label">מצב רישום</label>
+                        <label style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <input type="checkbox" /> פעיל
+                        </label>
+                        <label style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <input type="checkbox" /> בהכנה
+                        </label>
+                        <label style="display: flex; gap: 8px;">
+                            <input type="checkbox" /> למכירה
+                        </label>
+                    </div>
+                    <div class="filter-section">
+                        <label class="filter-label">עדכון אחרון</label>
+                        <label style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <input type="checkbox" /> היום
+                        </label>
+                        <label style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <input type="checkbox" /> השבוע
+                        </label>
+                        <label style="display: flex; gap: 8px;">
+                            <input type="checkbox" /> החודש
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="tablewrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>כתובת</th>
+                                <th>עיר</th>
+                                <th>מחיר</th>
+                                <th>שטח</th>
+                                <th>חדרים</th>
+                                <th>סטטוס</th>
+                                <th>מקור</th>
+                                <th>עדכון אחרון</th>
+                                <th>פעולה</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Rows rendered dynamically by renderTable() -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="filter-bar" id="pagination-bar" style="display:none;">
+                    <div class="spacer"></div>
+                    <button id="page-prev" style="display:none;">הקודם</button>
+                    <span id="page-info"></span>
+                    <button id="page-next" style="display:none;">הבא</button>
+                </div>
+
+                <!-- Empty / Error / Loading states for table -->
+                <div id="table-empty" class="kpi" style="display:none;">
+                    <div class="kpi-label">אין תוצאות</div>
+                    <div class="kpi-value">📭</div>
+                    <div class="kpi-trend">לא נמצאו נכסים עונים לסינון</div>
+                </div>
+                <div id="table-error" class="kpi" style="display:none;">
+                    <div class="kpi-label">שגיאה בטעינת הנתונים</div>
+                    <div class="kpi-value">⚠️</div>
+                    <div class="kpi-trend" id="table-error-msg"></div>
+                    <div style="margin-top:8px;">
+                        <button id="table-retry" style="background:var(--primary);color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">נסה שוב</button>
+                    </div>
+                </div>
+                <div id="table-loading" class="kpi" style="display:none;">
+                    <div class="kpi-label">טוען נכסים…</div>
+                    <div class="kpi-value">⏳</div>
+                </div>
+            </div>
+
+            <!-- Opportunities Tab -->
+            <div class="content" id="opportunities">
+                <h2 style="margin-bottom: 24px;">🎯 הזדמנויות</h2>
+                <div id="opp-loading" class="kpi" style="display:none;">
+                    <div class="kpi-label">טוען הזדמנויות…</div>
+                    <div class="kpi-value">⏳</div>
+                </div>
+                <div id="opp-error" class="kpi" style="display:none;">
+                    <div class="kpi-label">שגיאה</div>
+                    <div class="kpi-value">⚠️</div>
+                    <div class="kpi-trend" id="opp-error-msg"></div>
+                </div>
+                <div id="opp-empty" class="kpi" style="display:none;">
+                    <div class="kpi-label">אין הזדמנויות</div>
+                    <div class="kpi-value">📭</div>
+                </div>
+                <div class="tablewrap" id="opp-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ישוב</th>
+                                <th>ריבוי</th>
+                                <th>קיימות</th>
+                                <th>תכניות</th>
+                                <th>ציון</th>
+                            </tr>
+                        </thead>
+                        <tbody id="opp-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div class="content" id="analytics">
+                <h2 style="margin-bottom: 24px;">📈 ניתוח</h2>
+                <div id="analytics-loading" class="kpi" style="display:none;">
+                    <div class="kpi-label">טוען נתוני שוק…</div>
+                    <div class="kpi-value">⏳</div>
+                </div>
+                <div id="analytics-error" class="kpi" style="display:none;">
+                    <div class="kpi-label">שגיאה</div>
+                    <div class="kpi-value">⚠️</div>
+                    <div class="kpi-trend" id="analytics-error-msg"></div>
+                </div>
+                <div id="analytics-content" class="kpis" style="display:none;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const LIVE_API_BASE = 'http://127.0.0.1:8123';
+        const API_BASE = window.location.protocol === 'file:'
+            ? LIVE_API_BASE
+            : (window.location.origin || LIVE_API_BASE);
+
+        const state = {
+            kpis: null,
+            filters: null,
+            rows: [],
+            total: 0,
+            page: 1,
+            totalPages: 1,
+            loading: false,
+            error: null,
+            activeTab: 'dashboard',
+            selectedSource: 'all',
+            priceRanges: null,
+        };
+
+        async function fetchJson(url, options = {}) {
+            const candidates = [];
+            const normalizedUrl = String(url || '');
+
+            if (normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
+                candidates.push(normalizedUrl);
+            } else {
+                candidates.push(normalizedUrl);
+                if (normalizedUrl.startsWith('/')) {
+                    candidates.push(`${LIVE_API_BASE}${normalizedUrl}`);
+                } else if (window.location.protocol === 'file:') {
+                    candidates.push(`${LIVE_API_BASE}/${normalizedUrl}`);
+                }
+            }
+
+            let lastError = null;
+            for (const candidate of candidates) {
+                try {
+                    const response = await fetch(candidate, {
+                        headers: { 'Accept': 'application/json' },
+                        ...options,
+                    });
+                    if (!response.ok) {
+                        const text = await response.text();
+                        let message = `HTTP ${response.status}`;
+                        try {
+                            const data = JSON.parse(text);
+                            message = data.error || data.message || message;
+                        } catch {
+                            message = text || message;
+                        }
+                        throw new Error(message);
+                    }
+                    return response.json();
+                } catch (err) {
+                    lastError = err;
+                    if (candidate === candidates[candidates.length - 1]) {
+                        break;
+                    }
+                }
+            }
+
+            throw lastError || new Error('Request failed');
+        }
+
+        function showLoading(show) {
+            state.loading = show;
+            document.getElementById('table-loading').style.display = show ? 'block' : 'none';
+            document.getElementById('table-body').style.display = show ? 'none' : '';
+            document.getElementById('table-empty').style.display = 'none';
+            document.getElementById('table-error').style.display = 'none';
+            document.querySelector('.tablewrap').style.display = show ? 'none' : '';
+        }
+
+        function showError(containerId, message) {
+            state.error = message;
+            document.getElementById('table-error').style.display = 'block';
+            document.getElementById('table-error-msg').textContent = message;
+            document.getElementById('table-loading').style.display = 'none';
+            document.getElementById('table-empty').style.display = 'none';
+            document.querySelector('.tablewrap').style.display = 'none';
+        }
+
+        function showEmpty() {
+            state.error = null;
+            document.getElementById('table-empty').style.display = 'block';
+            document.getElementById('table-error').style.display = 'none';
+            document.getElementById('table-loading').style.display = 'none';
+            document.querySelector('.tablewrap').style.display = 'none';
+        }
+
+        function hideStates() {
+            document.getElementById('table-empty').style.display = 'none';
+            document.getElementById('table-error').style.display = 'none';
+            document.getElementById('table-loading').style.display = 'none';
+            document.querySelector('.tablewrap').style.display = '';
+        }
+
+        async function loadBootstrap() {
+            try {
+                const data = await fetchJson(`${API_BASE}/bootstrap`);
+                state.kpis = data.kpis || {};
+                state.filters = data.filters || {};
+
+                renderKpis(state.kpis);
+                renderFilters(state.filters);
+            } catch (err) {
+                console.error('Failed to load bootstrap:', err);
+                document.getElementById('kpi-error').style.display = 'block';
+                document.getElementById('kpi-error-msg').textContent = err.message;
+                document.getElementById('kpi-loading').style.display = 'none';
+                document.getElementById('kpi-container').style.display = 'none';
+            }
+        }
+
+        async function loadListings(filters = {}) {
+            showLoading(true);
+            state.error = null;
+
+            try {
+                const params = new URLSearchParams();
+                if (filters.city) params.set('city', filters.city);
+                if (filters.propertyType) params.set('propertyType', filters.propertyType);
+
+                if (filters.price && state.priceRanges && state.priceRanges.avg_price) {
+                    const { min_price, max_price, avg_price } = state.priceRanges;
+                    const low = Math.round(avg_price * 0.8);
+                    const high = Math.round(avg_price * 1.2);
+                    if (filters.price === 'low') {
+                        params.set('maxPrice', String(high));
+                    } else if (filters.price === 'mid') {
+                        params.set('minPrice', String(low));
+                        params.set('maxPrice', String(high));
+                    } else if (filters.price === 'high') {
+                        params.set('minPrice', String(low));
+                    }
+                }
+
+                params.set('limit', String(PAGE_SIZE));
+                params.set('offset', String((state.page - 1) * PAGE_SIZE));
+
+                const data = await fetchJson(`${API_BASE}/local-listings?${params.toString()}`);
+                state.rows = data.rows || [];
+                state.total = data.totalCount || data.total || 0;
+                state.page = data.page || 1;
+                state.totalPages = data.totalPages || 1;
+
+                hideStates();
+                renderTable(state.rows);
+                renderPagination();
+            } catch (err) {
+                console.error('Failed to load listings:', err);
+                showError('table-error', err.message);
+            }
+        }
+
+        function renderKpis(kpis) {
+            const container = document.getElementById('kpi-container');
+            document.getElementById('kpi-loading').style.display = 'none';
+            document.getElementById('kpi-error').style.display = 'none';
+            container.style.display = '';
+
+            const items = [
+                { label: 'נכסים פעילים', value: kpis.activeListings ?? 0, trend: '' },
+                { label: 'נכסים חדשים היום', value: kpis.newRequests ?? 0, trend: '' },
+                { label: 'לידים חמים', value: kpis.hotLeads ?? 0, trend: '' },
+                { label: 'עסקאות סגורות', value: kpis.closedDeals ?? 0, trend: '' },
+                { label: 'מרווח שוק', value: kpis.marketSpread ? `₪${kpis.marketSpread.p50 ?? kpis.marketSpread}/מ"ר` : '—', trend: '' },
+            ];
+
+            container.innerHTML = items.map(item => `
+                <div class="kpi">
+                    <div class="kpi-label">${item.label}</div>
+                    <div class="kpi-value">${item.value}</div>
+                    <div class="kpi-trend">${item.trend}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderFilters(filters) {
+            const citySelect = document.getElementById('filter-city');
+            const typeSelect = document.getElementById('filter-property-type');
+            const priceSelect = document.getElementById('filter-price');
+
+            if (citySelect && filters.cities) {
+                citySelect.innerHTML = '<option value="">🏙 כל הערים</option>' +
+                    filters.cities.map(c => `<option value="${c}">${c}</option>`).join('');
+            }
+            if (typeSelect && filters.propertyTypes) {
+                typeSelect.innerHTML = '<option value="">🏠 כל סוגי הנכסים</option>' +
+                    filters.propertyTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+            }
+            if (priceSelect && filters.priceRanges) {
+                state.priceRanges = filters.priceRanges;
+                const { min_price, max_price, avg_price } = filters.priceRanges;
+                if (avg_price) {
+                    const low = Math.round(avg_price * 0.8);
+                    const high = Math.round(avg_price * 1.2);
+                    priceSelect.innerHTML = `
+                        <option value="">💰 כל טווחי המחיר</option>
+                        <option value="low">עד ₪${low.toLocaleString()}</option>
+                        <option value="mid">₪${low.toLocaleString()} – ₪${high.toLocaleString()}</option>
+                        <option value="high">מעל ₪${high.toLocaleString()}</option>
+                    `;
+                } else {
+                    priceSelect.innerHTML = '<option value="">💰 כל טווחי המחיר</option>';
+                }
+            }
+        }
+
+        function renderTable(rows) {
+            const tbody = document.getElementById('table-body');
+            if (!rows.length) {
+                showEmpty();
+                return;
+            }
+
+            tbody.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${row.address || '—'}</td>
+                    <td>${row.city || '—'}</td>
+                    <td>${row.price != null ? '₪' + Number(row.price).toLocaleString() : '—'}</td>
+                    <td>${row.area != null ? row.area + ' מ"ר' : '—'}</td>
+                    <td>${row.rooms != null ? row.rooms : '—'}</td>
+                    <td>${row.status === 'active' ? 'פעיל' : row.status || '—'}</td>
+                    <td>${row.source || '—'}</td>
+                    <td>${row.updatedAt ? new Date(row.updatedAt).toLocaleDateString('he-IL') : '—'}</td>
+                    <td><button class="icon-btn" style="font-size:14px;">🔗</button></td>
+                </tr>
+            `).join('');
+        }
+
+        const PAGE_SIZE = 50;
+
+        function renderPagination() {
+            const bar = document.getElementById('pagination-bar');
+            const prev = document.getElementById('page-prev');
+            const next = document.getElementById('page-next');
+            const info = document.getElementById('page-info');
+
+            if (state.totalPages <= 1) {
+                bar.style.display = 'none';
+                return;
+            }
+
+            bar.style.display = 'flex';
+            info.textContent = `עמוד ${state.page} מתוך ${state.totalPages}`;
+            prev.style.display = state.page > 1 ? 'inline-block' : 'none';
+            next.style.display = state.page < state.totalPages ? 'inline-block' : 'none';
+        }
+
+        function getCurrentFilters() {
+            const city = document.getElementById('filter-city')?.value || '';
+            const propertyType = document.getElementById('filter-property-type')?.value || '';
+            const price = document.getElementById('filter-price')?.value || '';
+            const hasFilters = city || propertyType || price;
+            document.getElementById('filter-reset').style.display = hasFilters ? 'inline-block' : 'none';
+            return { city, propertyType, price };
+        }
+
+        async function onFilterChange() {
+            const filters = getCurrentFilters();
+            state.page = 1;
+            await loadListings(filters);
+        }
+
+        async function onRefresh() {
+            await loadBootstrap();
+            await loadListings(getCurrentFilters());
+        }
+
+        document.getElementById('filter-apply')?.addEventListener('click', onFilterChange);
+        document.getElementById('filter-reset')?.addEventListener('click', async () => {
+            document.getElementById('filter-city').value = '';
+            document.getElementById('filter-property-type').value = '';
+            document.getElementById('filter-price').value = '';
+            document.getElementById('filter-reset').style.display = 'none';
+            await onFilterChange();
+        });
+        document.getElementById('filter-refresh')?.addEventListener('click', onRefresh);
+        document.getElementById('table-retry')?.addEventListener('click', onRefresh);
+        document.getElementById('page-prev')?.addEventListener('click', async () => {
+            if (state.page > 1) {
+                state.page--;
+                await loadListings(getCurrentFilters());
+            }
+        });
+        document.getElementById('page-next')?.addEventListener('click', async () => {
+            if (state.page < state.totalPages) {
+                state.page++;
+                await loadListings(getCurrentFilters());
+            }
+        });
+
+        // Hamburger menu toggle
+        const hamburger = document.getElementById('hamburger');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+
+        hamburger.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        });
+
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        });
+
+        // Tab switching
+        const navItems = document.querySelectorAll('.nav-item');
+        const contents = document.querySelectorAll('.content');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const tabId = item.dataset.tab;
+
+                navItems.forEach(i => i.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+
+                item.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('open');
+                }
+            });
+        });
+
+        // Drawer toggle
+        const drawerToggle = document.getElementById('drawer-toggle');
+        const drawerContent = document.getElementById('drawer-content');
+
+        drawerToggle.addEventListener('click', () => {
+            drawerToggle.classList.toggle('open');
+            drawerContent.classList.toggle('open');
+        });
+
+        async function loadOpportunities() {
+            const loading = document.getElementById('opp-loading');
+            const errorEl = document.getElementById('opp-error');
+            const emptyEl = document.getElementById('opp-empty');
+            const tableWrap = document.getElementById('opp-table-wrap');
+            const tbody = document.getElementById('opp-table-body');
+
+            loading.style.display = 'block';
+            errorEl.style.display = 'none';
+            emptyEl.style.display = 'none';
+            tableWrap.style.display = 'none';
+            tbody.innerHTML = '';
+
+            try {
+                const data = await fetchJson(`${API_BASE}/opportunities?limit=50`);
+                const rows = data.rows || [];
+                if (!rows.length) {
+                    loading.style.display = 'none';
+                    emptyEl.style.display = 'block';
+                    return;
+                }
+                loading.style.display = 'none';
+                tableWrap.style.display = '';
+                tbody.innerHTML = rows.map(row => `
+                    <tr>
+                        <td>${row.locality || row.city || '—'}</td>
+                        <td>${row.multiplier != null ? row.multiplier + 'x' : '—'}</td>
+                        <td>${row.units_existing_n != null ? row.units_existing_n.toLocaleString() : '—'}</td>
+                        <td>${row.units_planned_n != null ? row.units_planned_n.toLocaleString() : '—'}</td>
+                        <td>${row.rank_score != null ? row.rank_score : '—'}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                loading.style.display = 'none';
+                errorEl.style.display = 'block';
+                document.getElementById('opp-error-msg').textContent = err.message;
+            }
+        }
+
+        async function loadAnalytics() {
+            const loading = document.getElementById('analytics-loading');
+            const errorEl = document.getElementById('analytics-error');
+            const content = document.getElementById('analytics-content');
+
+            loading.style.display = 'block';
+            errorEl.style.display = 'none';
+            content.style.display = 'none';
+            content.innerHTML = '';
+
+            try {
+                const data = await fetchJson(`${API_BASE}/market`);
+                loading.style.display = 'none';
+                content.style.display = '';
+
+                const national = data.national || {};
+                const items = [
+                    { label: 'מדד מחירי דירות (למ"ר)', value: national.value != null ? `₪${national.value}` : '—' },
+                    { label: 'שינוי חודשי', value: national.pct_change != null ? `${national.pct_change > 0 ? '+' : ''}${national.pct_change}%` : '—' },
+                    { label: 'שינוי שנתי', value: national.pct_year != null ? `${national.pct_year > 0 ? '+' : ''}${national.pct_year}%` : '—' },
+                    { label: 'ערים עם נתונים', value: (data.districts || []).length },
+                    { label: 'פרויקטים במאגר', value: (data.most_expensive || []).length + (data.cheapest || []).length },
+                ];
+
+                content.innerHTML = items.map(item => `
+                    <div class="kpi">
+                        <div class="kpi-label">${item.label}</div>
+                        <div class="kpi-value">${item.value}</div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                loading.style.display = 'none';
+                errorEl.style.display = 'block';
+                document.getElementById('analytics-error-msg').textContent = err.message;
+            }
+        }
+
+        // Tab switching
+        const navItems = document.querySelectorAll('.nav-item');
+        const contents = document.querySelectorAll('.content');
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const tabId = item.dataset.tab;
+
+                navItems.forEach(i => i.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+
+                item.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+
+                if (tabId === 'opportunities') {
+                    loadOpportunities();
+                } else if (tabId === 'analytics') {
+                    loadAnalytics();
+                }
+
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('open');
+                }
+            });
+        });
+
+        // Initialize
+        loadBootstrap().then(() => {
+            loadListings(getCurrentFilters());
+        });
+    </script>
+</body>
+</html>

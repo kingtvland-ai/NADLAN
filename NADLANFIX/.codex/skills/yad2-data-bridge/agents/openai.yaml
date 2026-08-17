@@ -1,0 +1,4 @@
+interface:
+  display_name: "ייבוא נתונים מיד2"
+  short_description: "משיכת מודעות יד2 והעברתן לכל מערכת"
+  default_prompt: "Use $yad2-data-bridge to fetch Yad2 listings and deliver them to my chosen destination."

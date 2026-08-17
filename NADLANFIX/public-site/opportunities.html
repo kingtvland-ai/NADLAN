@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NADLANFIX - הזדמנויות מובילות</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="page active" id="opportunities-page">
+    <nav class="navbar">
+      <div class="navbar-content">
+        <a href="#" class="navbar-brand" onclick="goBack(); return false;">
+          <div class="navbar-brand-icon">N</div>
+          <span>NADLANFIX</span>
+        </a>
+        <div class="navbar-user">
+          <span class="navbar-user-name">הזדמנויות מובילות</span>
+        </div>
+      </div>
+    </nav>
+
+    <section class="section">
+      <div class="container">
+        <button class="back-btn" onclick="goBack()">
+          ← חזרה לקטגוריות
+        </button>
+
+        <div class="text-center mb-3">
+          <h2>הזדמנויות מובילות</h2>
+          <p style="color: var(--gray-600); margin-top: 8px;" id="opportunities-count">טוען הזדמנויות…</p>
+        </div>
+
+        <div id="opportunities-results">
+          <div class="loading">
+            <div class="loading-spinner"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    (async function updateOpportunitiesCount() {
+      try {
+        const data = await api.getOpportunities({ limit: 1 });
+        const count = data.total || data.rows?.length || 0;
+        const el = document.getElementById('opportunities-count');
+        if (el) el.textContent = `${count} הנכסים עם הניקוד הטוב ביותר באזור`;
+      } catch (e) {
+        const el = document.getElementById('opportunities-count');
+        if (el) el.textContent = 'נכסים עם ניקוד טוב באזור';
+      }
+    })();
+  </script>
+</body>
+</html>

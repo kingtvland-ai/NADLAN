@@ -1,0 +1,11 @@
+backend/node_modules/
+node_modules/
+.env
+__pycache__/
+*.log
+.vite/
+.browser-profile/
+backend/.browser-profile/
+.browser-profile-active/
+backend/.browser-profile-active/
+yad_madlen__all.zip

@@ -1,0 +1,27 @@
+# The scheduled-refresh trigger, deliberately NOT the main image.
+#
+# Render disks attach to one service only - a separate `type: cron` service
+# cannot share `/data/planwatch.sqlite3` with the running web service by
+# giving its own disk block the same `name:`. That was a real defect in an
+# earlier draft of this file: it would have run scheduler.py against a
+# second, empty 5 GB volume every 12 hours and silently written nothing
+# anyone would ever see.
+#
+# The fix is not to run scheduler.py from the cron job at all. The web
+# service already exposes POST /api/scheduler/run (dashboard.py), and that
+# is the process holding the real disk open - so the cron's only job is to
+# ask the already-running service to do the work, the same way the "run
+# now" button in the UI does. That needs nothing but curl, which is why this
+# image carries no Python, no Node, and none of requirements.txt: a job that
+# fires every 12 hours should not cold-boot a multi-hundred-MB Playwright
+# image to make one HTTP request.
+FROM alpine:3.20
+RUN apk add --no-cache curl
+
+# PLANWATCH_URL and PLANWATCH_BASIC_AUTH come from render.yaml's envVars.
+# `sh -c` is required for the $VAR expansion below to happen at all -
+# without it these are passed to curl as the literal four characters
+# "$PLANWATCH_URL", which is a request to nowhere that fails loudly enough
+# to notice (curl exits non-zero on an unresolvable host) rather than
+# quietly hitting the wrong thing.
+ENTRYPOINT ["sh", "-c", "curl -fsS -X POST -u \"$PLANWATCH_BASIC_AUTH\" \"$PLANWATCH_URL/api/scheduler/run\""]

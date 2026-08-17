@@ -1,0 +1,28 @@
+{
+  "fixture_version": 1,
+  "source": "sanitized-capture-contract-sample",
+  "query": "thinkpad",
+  "records": [
+    {
+      "href": "/marketplace/item/900000000001/?ref=search",
+      "text": "$225\nLenovo ThinkPad T480 i5 16 GB\nNanaimo, BC",
+      "aria_label": null,
+      "image_url": "https://example.invalid/marketplace/1.jpg",
+      "image_alt": "Lenovo ThinkPad T480 i5 16 GB"
+    },
+    {
+      "href": "/marketplace/item/900000000002/?ref=search",
+      "text": "$300\nThinkPad T480 laptop - excellent condition\nVictoria, BC",
+      "aria_label": "ThinkPad T480 laptop - excellent condition",
+      "image_url": "https://example.invalid/marketplace/2.jpg",
+      "image_alt": null
+    },
+    {
+      "href": "/marketplace/item/900000000001/?tracking=duplicate",
+      "text": "$225\nDuplicate card",
+      "aria_label": null,
+      "image_url": null,
+      "image_alt": null
+    }
+  ]
+}

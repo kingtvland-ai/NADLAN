@@ -1,0 +1,17 @@
+# deploy/facebook-marketplace-scraper.service
+[Unit]
+Description=Facebook Marketplace research collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/FacebookMarketplaceScraper
+Environment=PYTHONUNBUFFERED=1
+ExecStart=%h/FacebookMarketplaceScraper/.venv/bin/fb-market daemon
+Restart=on-failure
+RestartSec=15
+Nice=10
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,1 @@
+"""Base source adapter components."""

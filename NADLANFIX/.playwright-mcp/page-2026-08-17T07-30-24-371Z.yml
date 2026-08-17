@@ -1,0 +1,79 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]: NADLANFIX
+    - textbox "חיפוש..." [ref=e5]
+    - generic [ref=e6]:
+      - button "⚙️" [ref=e7] [cursor=pointer]
+      - button "👤" [ref=e8] [cursor=pointer]
+  - generic [ref=e9]:
+    - navigation [ref=e10]:
+      - generic [ref=e11]:
+        - button "📊 בית" [ref=e12] [cursor=pointer]:
+          - generic [ref=e13]: 📊
+          - generic [ref=e14]: בית
+        - button "🎯 הזדמנויות" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]: 🎯
+          - generic [ref=e17]: הזדמנויות
+        - button "💼 CRM" [ref=e18] [cursor=pointer]:
+          - generic [ref=e19]: 💼
+          - generic [ref=e20]: CRM
+        - button "📈 ניתוח" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: 📈
+          - generic [ref=e23]: ניתוח
+        - button "📋 עוד" [ref=e24] [cursor=pointer]:
+          - generic [ref=e25]: 📋
+          - generic [ref=e26]: עוד
+      - generic [ref=e27]:
+        - button "🌍 מקורות" [ref=e28] [cursor=pointer]:
+          - generic [ref=e29]: 🌍
+          - generic [ref=e30]: מקורות
+        - button "🗂️ אחסון" [ref=e31] [cursor=pointer]:
+          - generic [ref=e32]: 🗂️
+          - generic [ref=e33]: אחסון
+        - button "🔧 הגדרות" [ref=e34] [cursor=pointer]:
+          - generic [ref=e35]: 🔧
+          - generic [ref=e36]: הגדרות
+      - generic [ref=e37]:
+        - button "🌙 מצב חשוך" [ref=e38] [cursor=pointer]:
+          - generic [ref=e39]: 🌙
+          - generic [ref=e40]: מצב חשוך
+        - button "❌ יציאה" [ref=e41] [cursor=pointer]:
+          - generic [ref=e42]: ❌
+          - generic [ref=e43]: יציאה
+    - main [ref=e44]:
+      - generic [ref=e45]:
+        - heading "🏠 לוח בקרה" [level=2] [ref=e46]
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - generic [ref=e49]: נכסים פעילים
+            - generic [ref=e50]: "0"
+          - generic [ref=e51]:
+            - generic [ref=e52]: נכסים חדשים היום
+            - generic [ref=e53]: "0"
+          - generic [ref=e54]:
+            - generic [ref=e55]: לידים חמים
+            - generic [ref=e56]: "0"
+          - generic [ref=e57]:
+            - generic [ref=e58]: עסקאות סגורות
+            - generic [ref=e59]: "0"
+          - generic [ref=e60]:
+            - generic [ref=e61]: מרווח שוק
+            - generic [ref=e62]: ₪[object Object]/מ"ר
+        - generic [ref=e63]:
+          - combobox [ref=e64]:
+            - option "🏙 כל הערים" [selected]
+          - combobox [ref=e65]:
+            - option "🏠 כל סוגי הנכסים" [selected]
+          - combobox [ref=e66]:
+            - option "💰 כל טווחי המחיר" [selected]
+            - option "עד ₪NaN"
+            - option "₪NaN – ₪NaN"
+            - option "מעל ₪NaN"
+          - button "סנן" [ref=e67] [cursor=pointer]
+          - button "🔄" [ref=e68] [cursor=pointer]
+        - generic [ref=e69] [cursor=pointer]:
+          - generic [ref=e70]: ▼
+          - generic [ref=e71]: סינון מורחב
+        - generic [ref=e72]:
+          - generic [ref=e73]: טוען נכסים…
+          - generic [ref=e74]: ⏳

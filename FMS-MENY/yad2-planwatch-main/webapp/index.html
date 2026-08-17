@@ -1,0 +1,524 @@
+<!doctype html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NADLAN4U — חיפוש נדל"ן</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* Same token palette as the PlanWatch admin dashboard (dashboard.html), so
+   the public site and the internal tool read as one product - extended with
+   an accent-2 hue and shadow scale for the richer consumer-facing look. */
+:root{
+  --page:#f5f6f8; --surface-1:#fff; --text-primary:#171a21; --text-secondary:#5b6270;
+  --muted:#8a90a0; --border:#e3e5eb; --series:#2a78d6; --series-soft:#eaf2fc;
+  --accent-2:#7c5cff; --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --radius:14px; --radius-sm:10px;
+  --shadow-sm:0 2px 8px rgba(20,25,40,.06); --shadow-md:0 10px 28px rgba(20,25,40,.10);
+  --shadow-lg:0 20px 50px rgba(20,25,40,.16);
+  --gradient-brand:linear-gradient(135deg,var(--series) 0%,var(--accent-2) 100%);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --page:#0f1117; --surface-1:#181b23; --text-primary:#eef0f4; --text-secondary:#aab0bd;
+    --muted:#6b7280; --border:#282c37; --series:#5b9ce8; --series-soft:#1e2a3d; --accent-2:#a794ff;
+    --shadow-sm:0 2px 8px rgba(0,0,0,.3); --shadow-md:0 10px 28px rgba(0,0,0,.4);
+    --shadow-lg:0 20px 50px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0f1117; --surface-1:#181b23; --text-primary:#eef0f4; --text-secondary:#aab0bd;
+  --muted:#6b7280; --border:#282c37; --series:#5b9ce8; --series-soft:#1e2a3d; --accent-2:#a794ff;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.3); --shadow-md:0 10px 28px rgba(0,0,0,.4);
+  --shadow-lg:0 20px 50px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text-primary);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+  min-height:100vh;overflow-x:hidden}
+header{display:flex;align-items:center;gap:10px;padding:14px 22px;
+  background:color-mix(in srgb, var(--surface-1) 88%, transparent);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:40}
+header .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;letter-spacing:-.2px}
+header .brand .dot{width:11px;height:11px;border-radius:50%;background:var(--gradient-brand);
+  box-shadow:0 0 0 4px color-mix(in srgb, var(--series) 18%, transparent);
+  animation:pulseDot 2.4s ease-in-out infinite}
+header .brand .name{background:var(--gradient-brand);-webkit-background-clip:text;background-clip:text;
+  color:transparent}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 0 4px color-mix(in srgb, var(--series) 18%, transparent)}
+  50%{box-shadow:0 0 0 8px color-mix(in srgb, var(--series) 6%, transparent)}}
+.logo-building{width:26px;height:26px;transform-origin:50% 100%;animation:buildingSway 2.6s ease-in-out infinite}
+.logo-building .win{animation:winFlicker 3.2s ease-in-out infinite}
+.logo-building .win:nth-child(2n){animation-delay:.5s}
+.logo-building .win:nth-child(3n){animation-delay:1s}
+@keyframes buildingSway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes winFlicker{0%,100%{opacity:.55}50%{opacity:1}}
+header .spacer{flex:1}
+button,input,select{font:inherit}
+.btn{border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);
+  border-radius:999px;padding:9px 16px;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,
+  border-color .18s ease}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+.btn.primary{background:var(--gradient-brand);border-color:transparent;color:#fff;font-weight:600;
+  box-shadow:0 8px 20px color-mix(in srgb, var(--series) 35%, transparent)}
+.btn.primary:hover{box-shadow:0 12px 28px color-mix(in srgb, var(--series) 45%, transparent);
+  transform:translateY(-2px)}
+.btn.wa{background:#25D366;border-color:#25D366;color:#06210f;text-decoration:none;
+  display:inline-flex;align-items:center;gap:6px}
+.btn.tg{background:#229ED9;border-color:#229ED9;color:#06202b;text-decoration:none;
+  display:inline-flex;align-items:center;gap:6px}
+main{max-width:1140px;margin:0 auto;padding:24px 16px 60px;position:relative}
+.hero-glow{position:absolute;top:-60px;right:-120px;width:420px;height:420px;border-radius:50%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--series) 22%, transparent) 0%, transparent 70%);
+  filter:blur(10px);pointer-events:none;z-index:0}
+.hero-glow.b{top:120px;left:-140px;right:auto;
+  background:radial-gradient(circle, color-mix(in srgb, var(--accent-2) 20%, transparent) 0%, transparent 70%)}
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius);
+  padding:22px;margin-bottom:16px;box-shadow:var(--shadow-sm);position:relative;z-index:1}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field label{font-size:13px;color:var(--text-secondary)}
+.field input,.field select{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;
+  background:var(--page);color:var(--text-primary);transition:border-color .15s ease,box-shadow .15s ease}
+.field input:focus,.field select:focus{outline:none;border-color:var(--series);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--series) 18%, transparent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.error{color:var(--critical);font-size:13px;margin-top:8px}
+.hidden{display:none !important}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+.result{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;
+  display:flex;gap:14px;background:var(--surface-1);position:relative;overflow:hidden;
+  cursor:pointer;animation:cardIn .35s ease both;
+  transition:transform .25s cubic-bezier(.2,.8,.3,1),box-shadow .25s ease,border-color .25s ease}
+.result:hover,.result.expanded{transform:translateY(-4px);box-shadow:var(--shadow-lg);
+  border-color:var(--series)}
+.result .result-media{position:relative;flex:none;overflow:hidden}
+.result img{width:110px;height:82px;object-fit:cover;background:var(--page);
+  display:block;transition:transform .4s ease}
+.result:hover img{transform:scale(1.08)}
+.result .body{flex:1;min-width:0;padding:14px 14px 14px 0}
+.result h4{margin:0 0 4px;font-size:15px}
+.result .price{font-weight:800;color:var(--series);font-size:16px}
+.result .meta{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.result .actions{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.result .actions a,.result .actions button{font-size:12px;padding:6px 10px}
+.badge-pop{position:absolute;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;
+  padding:4px 9px;border-radius:999px;color:#fff;z-index:2;animation:popIn .35s cubic-bezier(.3,1.6,.5,1) both;
+  box-shadow:0 4px 12px rgba(0,0,0,.22)}
+.badge-discount{top:6px;inset-inline-start:6px;background:linear-gradient(135deg,#0ca30c,#0a8f0a)}
+.badge-score{top:6px;inset-inline-end:6px;background:var(--gradient-brand)}
+#results.grid .badge-discount{top:8px;inset-inline-start:8px}
+#results.grid .badge-score{top:8px;inset-inline-end:8px}
+.reveal{max-height:0;opacity:0;overflow:hidden;transition:max-height .4s cubic-bezier(.2,.8,.3,1),
+  opacity .3s ease,margin-top .3s ease}
+.result:hover .reveal,.result.expanded .reveal{max-height:220px;opacity:1;margin-top:10px}
+.reveal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:12px}
+.reveal-stat{background:var(--page);border:1px solid var(--border);border-radius:8px;padding:6px 9px}
+.reveal-stat .l{color:var(--text-secondary);font-size:11px}
+.reveal-stat .v{font-weight:700;font-size:13px;margin-top:1px}
+.reveal-bar{grid-column:1 / -1;margin-top:2px}
+.reveal-bar .track{height:6px;border-radius:99px;background:var(--border);overflow:hidden;margin-top:4px}
+.reveal-bar .fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--good),#7bd67b)}
+.confidence-chip{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px}
+.confidence-chip.high{background:#e6f8e6;color:var(--good)}
+.confidence-chip.partial{background:#fff4e0;color:#b5790a}
+.confidence-chip.low{background:#fdeaea;color:var(--critical)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .confidence-chip.high{background:#123a12}
+  :root:not([data-theme="light"]) .confidence-chip.partial{background:#3a2c0f}
+  :root:not([data-theme="light"]) .confidence-chip.low{background:#3a1616}
+}
+:root[data-theme="dark"] .confidence-chip.high{background:#123a12}
+:root[data-theme="dark"] .confidence-chip.partial{background:#3a2c0f}
+:root[data-theme="dark"] .confidence-chip.low{background:#3a1616}
+.count{font-size:13px;color:var(--muted)}
+footer{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+.modes{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.modes button{border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);
+  border-radius:999px;padding:8px 16px;cursor:pointer;font-size:14px;transition:all .18s ease}
+.modes button[aria-selected="true"]{background:var(--gradient-brand);color:#fff;border-color:transparent;
+  box-shadow:0 6px 16px color-mix(in srgb, var(--series) 30%, transparent)}
+.group{margin-bottom:18px}
+.group h4{margin:0 0 8px;font-size:14px;color:var(--text-secondary)}
+.simple-row{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:14px;
+  transition:box-shadow .18s ease,border-color .18s ease}
+.simple-row:hover{box-shadow:var(--shadow-sm);border-color:var(--series)}
+.simple-row .t{font-weight:600}
+.simple-row .s{color:var(--text-secondary);font-size:12px;margin-top:2px}
+.score{display:inline-block;background:var(--series-soft);color:var(--series);border-radius:999px;
+  padding:2px 10px;font-size:12px;font-weight:600}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chips .chip{border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);
+  border-radius:999px;padding:6px 14px;cursor:pointer;font-size:13px;transition:all .15s ease}
+.chips .chip:hover{border-color:var(--series)}
+.chips .chip[aria-selected="true"]{background:var(--series-soft);color:var(--series);border-color:var(--series);
+  font-weight:600}
+.chips-label{font-size:12px;color:var(--muted);margin:0 0 6px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:4px 0 16px}
+.toolbar select{border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;
+  background:var(--surface-1);color:var(--text-primary)}
+.view-toggle{display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.view-toggle button{border:0;background:var(--surface-1);color:var(--text-secondary);
+  padding:7px 12px;cursor:pointer;font-size:13px}
+.view-toggle button[aria-selected="true"]{background:var(--series);color:#fff}
+#results.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+#results.grid .result{flex-direction:column;padding:0;overflow:hidden}
+#results.grid .result img{width:100%;height:150px;border-radius:0}
+#results.grid .result .body{padding:12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+.tile{border:1px solid var(--border);border-radius:var(--radius);padding:14px;background:var(--surface-1);
+  box-shadow:var(--shadow-sm)}
+.tile .n{font-size:22px;font-weight:700}
+.tile .l{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.parcel-ref{display:inline-block;background:var(--series-soft);color:var(--series);border-radius:6px;
+  padding:2px 8px;font-size:12px;font-weight:600;margin-top:4px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(10,12,18,.55);display:flex;
+  align-items:center;justify-content:center;padding:24px 16px;z-index:30}
+.modal{background:var(--surface-1);border-radius:var(--radius);max-width:560px;width:100%;
+  max-height:calc(100vh - 48px);box-shadow:0 20px 60px rgba(0,0,0,.3);
+  display:flex;flex-direction:column;overflow:hidden}
+.modal-head{display:flex;align-items:center;justify-content:space-between;
+  padding:18px 22px;border-bottom:1px solid var(--border);flex:none}
+.modal-head h3{margin:0;font-size:17px}
+.modal-close{border:0;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--text-secondary)}
+.modal-scroll{overflow-y:auto;padding:22px;flex:1;min-height:0}
+.modal-foot{flex:none;padding:12px 22px;border-top:1px solid var(--border)}
+.detail-row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px}
+.detail-row:last-child{border-bottom:0}
+.detail-row .k{color:var(--text-secondary);flex:none}
+.detail-row .v{text-align:left}
+
+/* -------- advanced filters (collapsible) -------- */
+.adv-toggle{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:var(--series);
+  font-size:13px;font-weight:600;cursor:pointer;padding:6px 0;margin-bottom:4px}
+.adv-toggle .chev{transition:transform .25s ease;display:inline-block}
+.adv-toggle[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.adv-panel{max-height:0;opacity:0;overflow:hidden;transition:max-height .35s ease,opacity .3s ease}
+.adv-panel.open{max-height:400px;opacity:1;margin-bottom:8px}
+.adv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px;
+  padding-top:8px}
+
+/* -------- animated progress bar (real % unknown - simulated, honest about it) -------- */
+.progress-wrap{display:flex;align-items:center;gap:10px;flex:1;min-width:220px}
+.progress-track{flex:1;height:10px;border-radius:99px;background:var(--border);overflow:hidden;
+  position:relative}
+.progress-fill{height:100%;width:0%;border-radius:99px;background:var(--gradient-brand);
+  transition:width .3s ease;position:relative;overflow:hidden}
+.progress-fill::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);
+  width:60%;animation:shimmer 1.1s linear infinite}
+@keyframes shimmer{from{transform:translateX(-120%)}to{transform:translateX(220%)}}
+.progress-label{font-size:12px;font-weight:700;color:var(--series);min-width:34px;text-align:left}
+
+/* -------- map view -------- */
+#results-map{height:540px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);
+  box-shadow:var(--shadow-sm);margin-bottom:16px;position:relative;z-index:1}
+.map-popup{font-family:inherit;min-width:180px}
+.map-popup .p{font-weight:800;color:var(--series);font-size:14px}
+.map-popup .a{font-weight:600;font-size:13px;margin:2px 0}
+.map-popup .m{font-size:12px;color:#5b6270}
+.map-popup a{display:inline-block;margin-top:6px;font-size:12px;color:var(--series);font-weight:600}
+.map-pin{width:14px;height:14px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+  background:var(--gradient-brand);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.map-note{font-size:12px;color:var(--muted);margin:-6px 0 14px}
+
+/* -------- listing detail modal (gallery / gush-helka / contact) -------- */
+.modal-wide{max-width:760px}
+.lightbox-main{width:100%;height:320px;border-radius:var(--radius-sm);overflow:hidden;
+  background:var(--page);display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.lightbox-main img{width:100%;height:100%;object-fit:contain}
+.lightbox-thumbs{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:16px}
+.lightbox-thumbs img{width:72px;height:54px;object-fit:cover;border-radius:6px;cursor:pointer;
+  border:2px solid transparent;flex:none;transition:border-color .15s ease,opacity .15s ease}
+.lightbox-thumbs img:hover{opacity:.85}
+.lightbox-thumbs img.active{border-color:var(--series)}
+.detail-section{margin-bottom:16px}
+.detail-section h4{margin:0 0 8px;font-size:13px;color:var(--text-secondary);
+  text-transform:uppercase;letter-spacing:.4px}
+.contact-box{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--page);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px}
+.contact-box .phone{font-size:18px;font-weight:800;color:var(--good)}
+.spinner{width:26px;height:26px;border-radius:50%;border:3px solid var(--border);
+  border-top-color:var(--series);animation:spin .7s linear infinite;margin:20px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal-footer-close{width:100%;padding:12px;font-size:14px}
+
+/* ==================== RESPONSIVE ====================
+   Everything above is desktop-first; this narrows layout for phones/tablets
+   rather than duplicating rules - only what actually needs to change at each
+   breakpoint. Modal becomes a near-full-screen sheet on phones specifically
+   because a centered 560px dialog on a 360px-wide screen is what pushed the
+   close button out of the visible area in the first place. */
+@media (max-width: 860px){
+  main{padding:18px 12px 48px}
+  .hero-glow{width:260px;height:260px}
+  .card{padding:16px}
+  .modes{gap:6px}
+  .modes button{padding:7px 12px;font-size:13px}
+  .adv-grid{grid-template-columns:1fr 1fr}
+  #results.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  #results-map{height:400px}
+}
+@media (max-width: 620px){
+  header{padding:12px 14px;gap:8px}
+  header .brand .name{font-size:16px}
+  #whoami{display:none !important}
+  main{padding:14px 10px 40px}
+  .hero-glow{display:none}
+  .card{padding:14px;border-radius:12px}
+  h2{font-size:19px}
+  .field input,.field select{padding:9px 10px;font-size:14px}
+  .row{gap:8px}
+  .adv-grid{grid-template-columns:1fr}
+  .toolbar{flex-direction:column;align-items:stretch}
+  .toolbar select{width:100%}
+  .view-toggle{width:100%}
+  .view-toggle button{flex:1}
+  /* Result cards stack (image above text) instead of a cramped side-by-side
+     row that leaves ~60 characters of width for price/address/actions. */
+  .result{flex-direction:column}
+  .result .result-media{width:100%}
+  .result img{width:100%;height:180px}
+  .result .body{padding:12px}
+  #results.grid{grid-template-columns:1fr 1fr;gap:8px}
+  #results.grid .result img{height:120px}
+  .tiles{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  #results-map{height:320px;border-radius:10px}
+  .contact-box{flex-direction:column;align-items:stretch;text-align:center}
+  .contact-box .phone{font-size:20px}
+  /* Modal becomes a full-screen sheet: the close button in the sticky
+     header is now impossible to scroll away from, on any content length. */
+  .modal-backdrop{padding:0;align-items:flex-end}
+  .modal{max-width:100%;width:100%;max-height:92vh;border-radius:16px 16px 0 0}
+  .modal-head{padding:14px 16px}
+  .modal-scroll{padding:16px}
+  .modal-foot{padding:10px 16px}
+  .lightbox-main{height:220px}
+  .lightbox-thumbs img{width:58px;height:44px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg class="logo-building" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="6" y="3" width="12" height="19" rx="1" fill="url(#bldg-grad)"/>
+      <rect class="win" x="8.5" y="6" width="2" height="2" fill="#fff" opacity="0.6"/>
+      <rect class="win" x="13.5" y="6" width="2" height="2" fill="#fff" opacity="0.6"/>
+      <rect class="win" x="8.5" y="10" width="2" height="2" fill="#fff" opacity="0.6"/>
+      <rect class="win" x="13.5" y="10" width="2" height="2" fill="#fff" opacity="0.6"/>
+      <rect class="win" x="8.5" y="14" width="2" height="2" fill="#fff" opacity="0.6"/>
+      <rect class="win" x="13.5" y="14" width="2" height="2" fill="#fff" opacity="0.6"/>
+      <rect x="10" y="18" width="4" height="4" fill="#fff" opacity="0.85"/>
+      <defs>
+        <linearGradient id="bldg-grad" x1="6" y1="3" x2="18" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="var(--series)"/>
+          <stop offset="1" stop-color="var(--accent-2)"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <span class="name">NADLAN4U</span>
+  </div>
+  <div class="spacer"></div>
+  <span id="whoami" class="count hidden"></span>
+  <button class="btn hidden" id="btn-logout">התנתקות</button>
+</header>
+
+<main>
+  <div class="hero-glow"></div>
+  <div class="hero-glow b"></div>
+
+  <section id="view-login" class="card" style="max-width:420px;margin:0 auto">
+    <h2>כניסה</h2>
+    <p class="count">קבל שם משתמש וסיסמה מהמנהל שלך.</p>
+    <div class="field"><label for="login-username">שם משתמש</label>
+      <input id="login-username" autocomplete="username"></div>
+    <div class="field"><label for="login-password">סיסמה</label>
+      <input id="login-password" type="password" autocomplete="current-password"></div>
+    <div class="row">
+      <button class="btn primary" id="btn-login">כניסה</button>
+    </div>
+    <div class="error hidden" id="login-error"></div>
+  </section>
+
+  <section id="view-search" class="card hidden">
+    <nav class="modes" id="modes">
+      <button data-mode="listings" aria-selected="true">נכסים למכירה</button>
+      <button data-mode="smart">חיפוש חכם</button>
+      <button data-mode="renewal">הזדמנויות התחדשות</button>
+      <button data-mode="market">שוק ומדדים</button>
+    </nav>
+
+    <div id="mode-listings">
+      <h2>נכסים למכירה — כל הארץ</h2>
+
+      <p class="chips-label">עיר (לחיצה אחת):</p>
+      <div class="chips" id="city-chips">
+        <button class="chip" data-city="">כל הארץ</button>
+        <button class="chip" data-city="תל אביב">תל אביב</button>
+        <button class="chip" data-city="ירושלים">ירושלים</button>
+        <button class="chip" data-city="חיפה">חיפה</button>
+        <button class="chip" data-city="ראשון לציון">ראשון לציון</button>
+        <button class="chip" data-city="באר שבע">באר שבע</button>
+        <button class="chip" data-city="נתניה">נתניה</button>
+      </div>
+
+      <p class="chips-label">חדרים:</p>
+      <div class="chips" id="room-chips">
+        <button class="chip" data-min-rooms="" data-max-rooms="">הכל</button>
+        <button class="chip" data-min-rooms="1" data-max-rooms="2">1-2</button>
+        <button class="chip" data-min-rooms="3" data-max-rooms="3">3</button>
+        <button class="chip" data-min-rooms="4" data-max-rooms="4">4</button>
+        <button class="chip" data-min-rooms="5" data-max-rooms="">5+</button>
+      </div>
+
+      <div class="field"><label for="q-locality">ישוב (או הקלד ישוב אחר)</label>
+        <input id="q-locality" placeholder="השאר ריק לחיפוש בכל הארץ"></div>
+      <div class="row">
+        <div class="field" style="flex:1;min-width:120px"><label for="q-min-price">מחיר מ-</label>
+          <input id="q-min-price" type="number" placeholder="0"></div>
+        <div class="field" style="flex:1;min-width:120px"><label for="q-max-price">מחיר עד</label>
+          <input id="q-max-price" type="number" placeholder="ללא הגבלה"></div>
+      </div>
+
+      <button class="adv-toggle" id="adv-toggle" type="button" aria-expanded="false">
+        מסננים מתקדמים <span class="chev">▾</span>
+      </button>
+      <div class="adv-panel" id="adv-panel">
+        <div class="adv-grid">
+          <div class="field"><label for="q-min-area">שטח מ- (מ"ר)</label>
+            <input id="q-min-area" type="number" placeholder="0"></div>
+          <div class="field"><label for="q-max-area">שטח עד (מ"ר)</label>
+            <input id="q-max-area" type="number" placeholder="ללא הגבלה"></div>
+          <div class="field"><label for="q-min-ppm">מחיר למ"ר מ-</label>
+            <input id="q-min-ppm" type="number" placeholder="0"></div>
+          <div class="field"><label for="q-max-ppm">מחיר למ"ר עד</label>
+            <input id="q-max-ppm" type="number" placeholder="ללא הגבלה"></div>
+          <div class="field"><label for="q-min-discount">הנחה מינימלית מול השוק (%)</label>
+            <input id="q-min-discount" type="number" placeholder="0"></div>
+          <div class="field"><label for="q-max-dom">ימים בשוק - מקסימום</label>
+            <input id="q-max-dom" type="number" placeholder="ללא הגבלה"></div>
+          <div class="field"><label for="q-source">מקור</label>
+            <select id="q-source">
+              <option value="">כל המקורות</option>
+              <option value="יד 2">יד 2</option>
+              <option value="על המפה">על המפה (ONMAP)</option>
+              <option value="ad">AD</option>
+              <option value="madlan-authorized">מדלן</option>
+              <option value="komo">קומו</option>
+            </select></div>
+        </div>
+        <label class="row" style="gap:6px;font-size:13px;margin-top:2px">
+          <input type="checkbox" id="q-has-url" style="width:auto">
+          רק מודעות עם קישור פעיל
+        </label>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="btn-search">חפש</button>
+        <span class="count" id="search-count"></span>
+        <div class="progress-wrap hidden" id="search-progress">
+          <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          <div class="progress-label" id="progress-label">0%</div>
+        </div>
+      </div>
+
+      <div class="toolbar" id="listings-toolbar" style="display:none">
+        <select id="sort-select">
+          <option value="score">מיון: מומלץ</option>
+          <option value="price_asc">מחיר: מהזול ליקר</option>
+          <option value="price_desc">מחיר: מהיקר לזול</option>
+          <option value="rooms_desc">הכי הרבה חדרים</option>
+          <option value="area_desc">הכי גדול (מ"ר)</option>
+        </select>
+        <div class="view-toggle" id="view-toggle">
+          <button data-view="list" aria-selected="true">רשימה</button>
+          <button data-view="grid" aria-selected="false">רשת</button>
+          <button data-view="map" aria-selected="false">מפה</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="mode-smart" class="hidden">
+      <h2>חיפוש חכם</h2>
+      <p class="count">גוש/חלקה, מספר תוכנית, שם ישוב, כתובת, קבלן או שמאי — הכל בתיבה אחת.</p>
+      <div class="field"><label for="q-smart">חיפוש</label>
+        <input id="q-smart" placeholder='למשל: "תל אביב", "6941/9", גוש 6941 חלקה 23'></div>
+      <div class="row">
+        <button class="btn primary" id="btn-smart-search">חפש</button>
+      </div>
+    </div>
+
+    <div id="mode-renewal" class="hidden">
+      <h2>הזדמנויות התחדשות עירונית</h2>
+      <p class="count">מתחמי פינוי-בינוי / תמ"א דורגו לפי הזדמנות — כל הארץ כברירת מחדל.</p>
+      <div class="field"><label for="q-ren-locality">ישוב (רשות)</label>
+        <input id="q-ren-locality" placeholder="השאר ריק לחיפוש בכל הארץ"></div>
+      <div class="row">
+        <label class="row" style="gap:6px;font-size:14px">
+          <input type="checkbox" id="q-ren-open" style="width:auto">
+          רק מתחמים שטרם ניתן בהם היתר בנייה
+        </label>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="btn-renewal-search">חפש</button>
+        <span class="count" id="renewal-count"></span>
+      </div>
+    </div>
+
+    <div id="mode-market" class="hidden">
+      <h2>שוק ומדדים</h2>
+      <p class="count">תמונת מצב ארצית: מדד מחירי דירות, הישובים היקרים והזולים ביותר.</p>
+      <div class="row">
+        <button class="btn primary" id="btn-market-load">טען נתונים</button>
+      </div>
+      <div id="market-content" style="margin-top:14px"></div>
+    </div>
+
+    <div class="error hidden" id="search-error"></div>
+  </section>
+
+  <section id="results"></section>
+  <div id="map-note-wrap" class="hidden"><p class="map-note" id="map-count-note"></p></div>
+  <div id="results-map" class="hidden"></div>
+
+  <section class="card" id="view-bots">
+    <h2>חיפוש דרך צ'אט</h2>
+    <p class="count">אפשר לחפש גם ישירות בבוט, ולשתף איתו כל תוצאה.</p>
+    <div class="row">
+      <a class="btn wa" id="link-whatsapp" href="#" target="_blank" rel="noopener">💬 חיפוש ב-WhatsApp</a>
+      <a class="btn tg" id="link-telegram" href="#" target="_blank" rel="noopener">✈ חיפוש ב-Telegram</a>
+    </div>
+  </section>
+
+  <div id="plan-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="plan-modal-title">פרטי תוכנית</h3>
+        <button class="modal-close" id="plan-modal-close" type="button">×</button>
+      </div>
+      <div id="plan-modal-body" class="modal-scroll"></div>
+      <div class="modal-foot"><button class="btn modal-footer-close" id="plan-modal-close-2" type="button">✕ סגור</button></div>
+    </div>
+  </div>
+
+  <div id="listing-modal" class="modal-backdrop hidden">
+    <div class="modal modal-wide">
+      <div class="modal-head">
+        <h3 id="listing-modal-title">פרטי נכס</h3>
+        <button class="modal-close" id="listing-modal-close" type="button">×</button>
+      </div>
+      <div id="listing-modal-body" class="modal-scroll"></div>
+      <div class="modal-foot"><button class="btn modal-footer-close" id="listing-modal-close-2" type="button">✕ סגור</button></div>
+    </div>
+  </div>
+</main>
+
+<footer>NADLAN4U</footer>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

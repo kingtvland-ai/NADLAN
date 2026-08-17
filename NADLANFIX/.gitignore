@@ -1,0 +1,62 @@
+# ---------------------------------------------------------------------------
+# Never publish: live credentials
+# ---------------------------------------------------------------------------
+# The Playwright profile holds the *logged-in Yad2 session* - Network/Cookies is
+# a working credential. Anyone with these files is signed in as you. This is the
+# single most important line in this file.
+backend/.browser-profile/
+backend/.browser-profile-active/
+.browser-profile/
+
+# bots/whatsapp/bot.js's default local auth dir - a live, logged-in
+# WhatsApp session (Baileys), same sensitivity as the Yad2 browser profile
+# above. In production this lives on the Render disk (WHATSAPP_AUTH_DIR),
+# never in the repo.
+bots/whatsapp/.auth/
+
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+
+# ---------------------------------------------------------------------------
+# Never publish: personal data
+# ---------------------------------------------------------------------------
+# The database is not just large, it is *people*: advertiser phone numbers and
+# names harvested from ONMAP, 30,515 named rights-holder hints tied to specific
+# parcels, and saved lead notes. None of that belongs in a code repository, at
+# any visibility setting.
+data/
+*.sqlite3
+*.sqlite3-journal
+*.db
+
+# ---------------------------------------------------------------------------
+# Too large for GitHub (100 MB per-file hard limit)
+# ---------------------------------------------------------------------------
+*.zip
+yad_madlen__all.zip
+
+# ---------------------------------------------------------------------------
+# Build output, caches, dependencies
+# ---------------------------------------------------------------------------
+node_modules/
+dist/
+.vite/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# ---------------------------------------------------------------------------
+# Local run artefacts
+# ---------------------------------------------------------------------------
+*.log
+debug.log
+inspect_output.txt
+backend/test-artifacts/
+*.png
+!frontend/src/assets/*.png

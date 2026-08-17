@@ -1,0 +1,70 @@
+- generic [active] [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e3]: NADLANFIX
+    - textbox "חיפוש..." [ref=f1e5]
+    - generic [ref=f1e6]:
+      - button "⚙️" [ref=f1e7] [cursor=pointer]
+      - button "👤" [ref=f1e8] [cursor=pointer]
+  - generic [ref=f1e9]:
+    - navigation [ref=f1e10]:
+      - generic [ref=f1e11]:
+        - button "📊 בית" [ref=f1e12] [cursor=pointer]:
+          - generic [ref=f1e13]: 📊
+          - generic [ref=f1e14]: בית
+        - button "🎯 הזדמנויות" [ref=f1e15] [cursor=pointer]:
+          - generic [ref=f1e16]: 🎯
+          - generic [ref=f1e17]: הזדמנויות
+        - button "💼 CRM" [ref=f1e18] [cursor=pointer]:
+          - generic [ref=f1e19]: 💼
+          - generic [ref=f1e20]: CRM
+        - button "📈 ניתוח" [ref=f1e21] [cursor=pointer]:
+          - generic [ref=f1e22]: 📈
+          - generic [ref=f1e23]: ניתוח
+        - button "📋 עוד" [ref=f1e24] [cursor=pointer]:
+          - generic [ref=f1e25]: 📋
+          - generic [ref=f1e26]: עוד
+      - generic [ref=f1e27]:
+        - button "🌍 מקורות" [ref=f1e28] [cursor=pointer]:
+          - generic [ref=f1e29]: 🌍
+          - generic [ref=f1e30]: מקורות
+        - button "🗂️ אחסון" [ref=f1e31] [cursor=pointer]:
+          - generic [ref=f1e32]: 🗂️
+          - generic [ref=f1e33]: אחסון
+        - button "🔧 הגדרות" [ref=f1e34] [cursor=pointer]:
+          - generic [ref=f1e35]: 🔧
+          - generic [ref=f1e36]: הגדרות
+      - generic [ref=f1e37]:
+        - button "🌙 מצב חשוך" [ref=f1e38] [cursor=pointer]:
+          - generic [ref=f1e39]: 🌙
+          - generic [ref=f1e40]: מצב חשוך
+        - button "❌ יציאה" [ref=f1e41] [cursor=pointer]:
+          - generic [ref=f1e42]: ❌
+          - generic [ref=f1e43]: יציאה
+    - main [ref=f1e44]:
+      - generic [ref=f1e45]:
+        - heading "🏠 לוח בקרה" [level=2] [ref=f1e46]
+        - generic [ref=f1e47]:
+          - combobox [ref=f1e48]:
+            - option "🏙 כל הערים" [selected]
+          - combobox [ref=f1e49]:
+            - option "🏠 כל סוגי הנכסים" [selected]
+          - combobox [ref=f1e50]:
+            - option "💰 כל טווחי המחיר" [selected]
+          - button "סנן" [ref=f1e51] [cursor=pointer]
+          - button "🔄" [ref=f1e52] [cursor=pointer]
+        - generic [ref=f1e53] [cursor=pointer]:
+          - generic [ref=f1e54]: ▼
+          - generic [ref=f1e55]: סינון מורחב
+        - table [ref=f1e57]:
+          - rowgroup [ref=f1e58]:
+            - row [ref=f1e59]:
+              - columnheader "כתובת" [ref=f1e60]
+              - columnheader "עיר" [ref=f1e61]
+              - columnheader "מחיר" [ref=f1e62]
+              - columnheader "שטח" [ref=f1e63]
+              - columnheader "חדרים" [ref=f1e64]
+              - columnheader "סטטוס" [ref=f1e65]
+              - columnheader "מקור" [ref=f1e66]
+              - columnheader "עדכון אחרון" [ref=f1e67]
+              - columnheader "פעולה" [ref=f1e68]
+          - rowgroup
